@@ -1,16 +1,28 @@
 "use client"
 
-import React, { useRef, useEffect, useCallback } from "react"
-import Editor from "@monaco-editor/react"
+import React, { useRef, useEffect, useCallback, useState } from "react"
+import { Editor, DiffEditor } from "@monaco-editor/react"
 import { useFileStore } from "./fileStore"
-import { Save, FileCode2 } from "lucide-react"
+import { Save, FileCode2, Split, Wand2, Sparkles } from "lucide-react"
+import SuggestionOverlay from "./SuggestionOverlay"
+import { cn } from "@/lib/utils"
 
 export default function CodeEditor() {
-    const { activeFile, projectFiles, editorBuffers, setEditorBuffer, saveFile } = useFileStore()
+    const { activeFile, projectFiles, editorBuffers, setEditorBuffer, saveFile, suggestedChanges } = useFileStore()
     const editorRef = useRef<any>(null)
+    const [viewMode, setViewMode] = useState<"edit" | "diff">("edit")
 
     const currentValue = editorBuffers[activeFile] ?? projectFiles[activeFile]?.code ?? ""
+    const originalValue = projectFiles[activeFile]?.code ?? ""
     const hasUnsaved   = editorBuffers[activeFile] !== undefined
+    
+    const hasSuggestionForThisFile = suggestedChanges?.filePath === activeFile
+    const proposedValue = suggestedChanges?.proposedCode ?? ""
+
+    // Automatically reset mode when changing files
+    useEffect(() => {
+        setViewMode("edit")
+    }, [activeFile])
 
     // When AI applies changes to the currently-open file, push into Monaco.
     useEffect(() => {
@@ -34,10 +46,7 @@ export default function CodeEditor() {
                 e.preventDefault()
                 const { activeFile, editorBuffers } = useFileStore.getState()
                 if (editorBuffers[activeFile] !== undefined) {
-                    console.log(`[Editor] Ctrl+S → saveFile("${activeFile}")`)
                     useFileStore.getState().saveFile(activeFile)
-                } else {
-                    console.log("[Editor] Ctrl+S — no unsaved changes")
                 }
             }
         }
@@ -46,34 +55,51 @@ export default function CodeEditor() {
     }, [])
 
     const handleChange = useCallback((val: string | undefined) => {
-        if (val !== undefined) setEditorBuffer(activeFile, val)
-    }, [activeFile, setEditorBuffer])
+        if (val !== undefined && viewMode === "edit") setEditorBuffer(activeFile, val)
+    }, [activeFile, setEditorBuffer, viewMode])
 
     const handleMount = useCallback((editor: any) => {
         editorRef.current = editor
-        editor.addCommand(2048 | 49, () => {
-            const { activeFile } = useFileStore.getState()
-            useFileStore.getState().saveFile(activeFile)
-        })
     }, [])
 
-    // Format active file as breadcrumb: /src/data/portfolioData.js
     const breadcrumb = activeFile || "No file"
 
     return (
-        <div className="h-full flex flex-col bg-[#0b0b0e]">
-            {/* File tab / breadcrumb header — matches screenshot */}
-            <div className="h-9 shrink-0 flex items-center justify-between bg-[#0f0f12] border-b border-[#1c1c22] px-0">
-                {/* File tab */}
+        <div className="h-full flex flex-col bg-[#0b0b0e] relative overflow-hidden">
+            {/* AI Review Header (Cursor Style) */}
+            {hasSuggestionForThisFile && (
+                <div className="h-10 shrink-0 bg-indigo-600/10 border-b border-indigo-500/30 flex items-center justify-between px-4 z-20">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">
+                            AI Diff Mode Passive
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setViewMode(viewMode === "diff" ? "edit" : "diff")}
+                            className={cn(
+                                "flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold uppercase transition-all border",
+                                viewMode === "diff" 
+                                    ? "bg-indigo-500 text-white border-indigo-400" 
+                                    : "bg-transparent text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/10"
+                            )}
+                        >
+                            <Split className="w-3 h-3" />
+                            {viewMode === "diff" ? "Close Diff" : "Preview Diff"}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Editor Primary Header */}
+            <div className="h-9 shrink-0 flex items-center justify-between bg-[#0f0f12] border-b border-[#1c1c22] px-0 z-10 shadow-md">
                 <div className="flex items-center h-full">
-                    <div className={`flex items-center gap-2 h-full px-4 border-r border-[#1c1c22] text-xs font-mono transition-colors ${
-                        activeFile
-                            ? "bg-[#0b0b0e] text-foreground border-t-2 border-t-indigo-500"
-                            : "text-muted-foreground"
-                    }`}>
-                        {activeFile && (
-                            <FileCode2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                        )}
+                    <div className={cn(
+                        "flex items-center gap-2 h-full px-4 border-r border-[#1c1c22] text-xs font-mono transition-colors",
+                        activeFile ? "bg-[#0b0b0e] text-foreground border-t-2 border-t-indigo-500" : "text-muted-foreground"
+                    )}>
+                        {activeFile && <FileCode2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
                         <span className="truncate max-w-[280px]">{breadcrumb}</span>
                         {hasUnsaved && (
                             <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0" title="Unsaved changes" />
@@ -81,50 +107,76 @@ export default function CodeEditor() {
                     </div>
                 </div>
 
-                {/* Save button — right side */}
-                <button
-                    onClick={() => saveFile(activeFile)}
-                    disabled={!hasUnsaved}
-                    className={`flex items-center gap-1.5 mr-3 px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest transition-all ${
-                        hasUnsaved
-                            ? "bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 hover:border-indigo-500/50 cursor-pointer"
-                            : "text-muted-foreground/30 cursor-not-allowed"
-                    }`}
-                    title={hasUnsaved ? "Save (Ctrl+S)" : "No changes"}
-                >
-                    <Save className="w-3 h-3" />
-                    {hasUnsaved ? "Save" : "Saved"}
-                </button>
+                <div className="flex items-center gap-2 pr-3">
+                    <button
+                        onClick={() => saveFile(activeFile)}
+                        disabled={!hasUnsaved}
+                        className={cn(
+                            "flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest transition-all",
+                            hasUnsaved
+                                ? "bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 cursor-pointer shadow-lg shadow-indigo-600/10"
+                                : "text-muted-foreground/30 cursor-not-allowed"
+                        )}
+                    >
+                        <Save className="w-3 h-3" />
+                        {hasUnsaved ? "Save All" : "Saved"}
+                    </button>
+                </div>
             </div>
 
-            {/* Monaco editor */}
-            <div className="flex-1 min-h-0 overflow-hidden">
+            {/* Monaco Editor Container */}
+            <div className="flex-1 min-h-0 overflow-hidden relative">
                 {activeFile ? (
-                    <Editor
-                        height="100%"
-                        theme="vs-dark"
-                        language={inferLang(activeFile)}
-                        key={activeFile}
-                        defaultValue={currentValue}
-                        onChange={handleChange}
-                        onMount={handleMount}
-                        options={{
-                            fontSize: 13,
-                            minimap: { enabled: false },
-                            scrollBeyondLastLine: false,
-                            wordWrap: "on",
-                            tabSize: 2,
-                            lineNumbers: "on",
-                            renderLineHighlight: "line",
-                            scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
-                        }}
-                    />
+                    viewMode === "diff" && hasSuggestionForThisFile ? (
+                        <DiffEditor
+                            height="100%"
+                            theme="vs-dark"
+                            language={inferLang(activeFile)}
+                            original={originalValue}
+                            modified={proposedValue}
+                            options={{
+                                fontSize: 13,
+                                minimap: { enabled: false },
+                                scrollBeyondLastLine: false,
+                                renderSideBySide: true,
+                                readOnly: true,
+                            }}
+                        />
+                    ) : (
+                        <Editor
+                            height="100%"
+                            theme="vs-dark"
+                            language={inferLang(activeFile)}
+                            key={activeFile}
+                            defaultValue={currentValue}
+                            onChange={handleChange}
+                            onMount={handleMount}
+                            options={{
+                                fontSize: 13,
+                                minimap: { enabled: false },
+                                scrollBeyondLastLine: false,
+                                wordWrap: "on",
+                                tabSize: 2,
+                                lineNumbers: "on",
+                                renderLineHighlight: "line",
+                                scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
+                                padding: { top: 10 }
+                            }}
+                        />
+                    )
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
                         <FileCode2 className="w-10 h-10 opacity-20" />
-                        <span className="text-xs uppercase tracking-widest opacity-50">Select a file to edit</span>
+                        <span className="text-xs uppercase tracking-widest opacity-50">Select a file from Explorer</span>
                     </div>
                 )}
+                
+                {/* Local Suggestion Interaction — pinned specifically to editor pane */}
+                <div className="absolute top-0 left-0 w-full flex justify-center pointer-events-none">
+                    <div className="w-full max-w-[800px] pointer-events-auto">
+                        <SuggestionOverlay />
+                    </div>
+                </div>
             </div>
         </div>
     )

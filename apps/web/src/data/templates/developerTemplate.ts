@@ -16,7 +16,7 @@ export const developerTemplate: Template = {
     "react-dom": "^18.2.0"
   },
   files: {
-    "/public/index.html": {
+    "public/index.html": {
       code: `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -30,10 +30,10 @@ export const developerTemplate: Template = {
 </html>`,
       language: "html"
     },
-    "/src/index.js": {
+    "src/index.js": {
       code: `import React from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.js";
+import App from "./App";
 import "./styles.css";
 
 const rootElement = document.getElementById("root");
@@ -43,10 +43,10 @@ if (rootElement) {
 }`,
       language: "javascript"
     },
-    "/src/App.js": {
+    "src/App.js": {
       code: `import React from "react";
-import { Hero } from "./components/Hero.jsx";
-import { Projects } from "./components/Projects.jsx";
+import { Hero } from "./components/Hero";
+import { Projects } from "./components/Projects";
 
 export default function App() {
   return (
@@ -60,9 +60,9 @@ export default function App() {
 }`,
       language: "javascript"
     },
-    "/src/components/Hero.jsx": {
+    "src/components/Hero.jsx": {
       code: `import React from "react";
-import { portfolioData } from "../data/portfolioData.js";
+import { portfolioData } from "../data/portfolioData";
 
 export const Hero = () => {
   return (
@@ -79,16 +79,16 @@ export const Hero = () => {
 };`,
       language: "javascript"
     },
-    "/src/components/Projects.jsx": {
+    "src/components/Projects.jsx": {
       code: `import React from "react";
-import { portfolioData } from "../data/portfolioData.js";
+import { portfolioData } from "../data/portfolioData";
 
 export const Projects = () => {
   return (
     <section className="projects-section">
       <h2>Recent Work</h2>
       <div className="projects-grid">
-        {portfolioData.projects.map((project, index) => (
+        {(portfolioData.projects || []).map((project, index) => (
           <div key={index} className="project-card">
             <h3>{project.title}</h3>
             <p>{project.description}</p>
@@ -100,7 +100,7 @@ export const Projects = () => {
 };`,
       language: "javascript"
     },
-    "/src/data/portfolioData.js": {
+    "src/data/portfolioData.js": {
       code: `export const portfolioData = {
   name: "Alex Rivera",
   role: "Senior Full Stack Engineer",
@@ -112,8 +112,13 @@ export const Projects = () => {
 };`,
       language: "javascript"
     },
-    "/src/styles.css": {
-      code: `body { margin: 0; font-family: sans-serif; background: #0d1117; color: #c9d1d9; }`,
+    "src/styles.css": {
+      code: `body { margin: 0; font-family: sans-serif; background: #0d1117; color: #c9d1d9; }
+.hero { padding: 4rem 2rem; text-align: center; }
+.hero h1 { font-size: 3rem; margin-bottom: 1rem; color: #58a6ff; }
+.skill-badge { background: #21262d; padding: 0.2rem 0.6rem; border-radius: 12px; margin: 0.3rem; display: inline-block; font-size: 0.8rem; border: 1px border #30363d; }
+.projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; padding: 2rem; }
+.project-card { background: #161b22; padding: 1.5rem; border-radius: 8px; border: 1px solid #30363d; }`,
       language: "css"
     }
   }

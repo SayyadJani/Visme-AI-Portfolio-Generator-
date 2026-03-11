@@ -13,6 +13,7 @@ import PreviewPanel from "./PreviewPanel"
 import { motion, AnimatePresence } from "framer-motion"
 import { SandpackConsole } from "@codesandbox/sandpack-react"
 import SandpackDiagnostics from "./SandpackDiagnostics"
+import SuggestionOverlay from "./SuggestionOverlay"
 
 export default function BuilderLayout() {
     const [explorerOpen, setExplorerOpen] = useState(true)
@@ -142,6 +143,8 @@ export default function BuilderLayout() {
                     <PreviewPanel />
                 </div>
             </div>
+
+            {/* Activities & Sidebar Handlers handled inside subcomponents */}
         </div>
     )
 }

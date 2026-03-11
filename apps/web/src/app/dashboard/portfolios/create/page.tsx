@@ -18,7 +18,13 @@ import { useFileStore } from "@/components/builder/fileStore"
 export default function CreatePortfolioPage() {
     const router = useRouter()
     const { selectedTemplate, setSelectedTemplate } = useTemplateStore()
-    const { parsedResume, setResumeFile: storeSetResumeFile, performMockParsing, generateSuggestions } = useFileStore()
+    const { 
+        parsedResume, 
+        setResumeFile: storeSetResumeFile, 
+        performMockParsing, 
+        generateSuggestions,
+        createInstance
+    } = useFileStore()
 
     const [currentStep, setCurrentStep] = useState(() => selectedTemplate ? 2 : 1)
     const [isProcessing, setIsProcessing] = useState(false)
@@ -56,6 +62,13 @@ export default function CreatePortfolioPage() {
         setIsGenerating(true)
 
         try {
+            // STEP 3.5: Initialize Instance with Template Files
+            createInstance(
+                selectedTemplate.id, 
+                selectedTemplate.name, 
+                selectedTemplate.files as any
+            )
+
             // STEP 4: Information Matching (Generate Recommendations)
             generateSuggestions()
 

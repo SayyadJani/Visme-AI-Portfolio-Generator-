@@ -3,6 +3,7 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 import { validateAndLog } from "./validateTemplate"
+import { ReconciliationData, ExperienceEntry } from "../portfolio/parsing/types"
 
 export interface VirtualFile { code: string; language?: string }
 export type VirtualFileSystem = Record<string, VirtualFile>
@@ -20,7 +21,7 @@ interface FileStoreState {
     pendingSandpackSync: { seq: number; files: Record<string, string> } | null
     resumeFile: File | null
     resumeText: string | null
-    parsedResume: any | null
+    parsedResume: ReconciliationData | null
     suggestedChanges: { filePath: string; originalCode: string; proposedCode: string } | null
     createInstance: (templateId: string, templateName: string, templateFiles: VirtualFileSystem) => string
     setCurrentInstance: (instanceId: string) => void
@@ -103,17 +104,30 @@ export const useFileStore = create<FileStoreState>()(
             },
 
             generateSuggestions: () => {
-                const { currentInstanceId, instances, parsedResume } = get()
+                const { currentInstanceId, instances, parsedResume, projectFiles } = get()
                 if (!currentInstanceId || !parsedResume) return
-                const currentInstance = instances[currentInstanceId]
-                if (!currentInstance) return
-                const dataPath = Object.keys(currentInstance.files).find(p => p.includes("portfolioData"))
+                
+                // Find the data file in the CURRENT project files
+                const dataPath = Object.keys(projectFiles).find(p => p.includes("portfolioData"))
                 if (!dataPath) return
-                const fileEntry = currentInstance.files[dataPath]
+                
+                const fileEntry = projectFiles[dataPath]
                 if (!fileEntry) return
+                
                 const originalCode = fileEntry.code
-                const proposedCode = `export const portfolioData = {\n  name: "${parsedResume.personalDetails.fullName}",\n  role: "Full Stack Developer",\n  skills: ${JSON.stringify(parsedResume.skills)}\n};\n`
-                console.log("[Store] generateSuggestions →", dataPath)
+                
+                // Simulation of "Smart Comparison" logic
+                // In a real app, this would be a DIFF or a structured merge
+                const proposedCode = [
+                    `export const portfolioData = {`,
+                    `  name: "${parsedResume.personalDetails.fullName}",`,
+                    `  role: "Full Stack Developer",`,
+                    `  skills: ${JSON.stringify(parsedResume.skills, null, 2)},`,
+                    `  projects: ${JSON.stringify(parsedResume.experience.map(e => ({ title: e.role, description: e.desc })), null, 2)}`,
+                    `};`
+                ].join("\n")
+
+                console.log("[Store] 🤖 AI Scan Complete — Suggestions found for:", dataPath)
                 set({ suggestedChanges: { filePath: dataPath, originalCode, proposedCode } })
             },
 
@@ -130,7 +144,9 @@ export const useFileStore = create<FileStoreState>()(
                 }
 
                 const activeFile = filesCopy["/src/App.js"]  ? "/src/App.js"
+                                 : filesCopy["src/App.js"]   ? "src/App.js"
                                  : filesCopy["/src/App.jsx"] ? "/src/App.jsx"
+                                 : filesCopy["src/App.jsx"]  ? "src/App.jsx"
                                  : Object.keys(filesCopy)[0] ?? ""
 
                 console.group("%c[Store] createInstance", "color:#00d4aa;font-weight:bold")
@@ -153,7 +169,9 @@ export const useFileStore = create<FileStoreState>()(
             setCurrentInstance: (id) => {
                 const inst = get().instances[id]
                 if (!inst) return
-                const activeFile = inst.files["/src/App.js"] ? "/src/App.js" : Object.keys(inst.files)[0]
+                const activeFile = inst.files["/src/App.js"] ? "/src/App.js" 
+                                 : inst.files["src/App.js"] ? "src/App.js"
+                                 : Object.keys(inst.files)[0]
                 console.log("[Store] setCurrentInstance →", id)
                 set({ currentInstanceId: id, projectFiles: inst.files, activeFile, editorBuffers: {}, pendingSandpackSync: null })
             },
@@ -183,14 +201,16 @@ export const useFileStore = create<FileStoreState>()(
                     return
                 }
 
-                const oldCode = projectFiles[path]?.code ?? "(no previous content)"
+                const oldInstanceCode = JSON.stringify(projectFiles, null, 2)
+                const newInstanceFiles = { ...projectFiles, [path]: { ...projectFiles[path], code } }
+                const newInstanceCode = JSON.stringify(newInstanceFiles, null, 2)
 
-                console.group(`%c[Store] ✏️ saveFile("${path}")`, "color:#7c6aff;font-weight:bold")
-                console.log("%cOLD INSTANCE (before save):", "color:#ef4444")
-                console.log(oldCode)
-                console.log("%cNEW INSTANCE (after save):", "color:#22c55e")
-                console.log(code)
-                console.log("Changed:", oldCode !== code)
+                console.group(`%c[Store] 💾 INSTANCE SAVED: "${path}"`, "color:#7c6aff;font-weight:bold;font-size:12px")
+                console.log("%c--- OLD INSTANCE STATE ---", "color:#ef4444;font-weight:bold")
+                console.log(oldInstanceCode)
+                console.log("%c--- NEW INSTANCE STATE ---", "color:#22c55e;font-weight:bold")
+                console.log(newInstanceCode)
+                console.log("%cChange Detected:", "color:#3b82f6", projectFiles[path]?.code !== code)
                 console.groupEnd()
 
                 get().updateFile(path, code)
@@ -234,32 +254,17 @@ export const useFileStore = create<FileStoreState>()(
                 const { suggestedChanges } = get()
                 if (!suggestedChanges) return
 
-                const { filePath, originalCode, proposedCode } = suggestedChanges
+                const { filePath, proposedCode } = suggestedChanges
 
-                console.group("%c[Store] 🤖 acceptSuggestions", "color:#f59e0b;font-weight:bold")
-                console.log("  filePath:", filePath)
-                console.log("%c  OLD CODE (instance before AI apply):", "color:#ef4444")
-                console.log(originalCode)
-                console.log("%c  NEW CODE (instance after AI apply):", "color:#22c55e")
-                console.log(proposedCode)
-                console.groupEnd()
-
-                // 1) Write proposed code to VFS
-                get().updateFile(filePath, proposedCode)
-
-                // 2) Signal bridge to push to Sandpack + recompile
-                const seq = ++syncSeq
-                console.log(`[Store] 🔔 pendingSandpackSync → seq=${seq} file="${filePath}"`)
-
-                set(s => {
-                    const next = { ...s.editorBuffers }
-                    delete next[filePath] // clear any stale buffer for this file
-                    return {
-                        editorBuffers: next,
-                        suggestedChanges: null,
-                        pendingSandpackSync: { seq, files: { [filePath]: proposedCode } }
-                    }
-                })
+                console.log(`%c[Store] 🤖 AI Accept → Buffer for "${filePath}"`, "color:#f59e0b;font-weight:bold")
+                
+                // IMPORTANT: We do NOT update VFS here. 
+                // We only put it in the buffer so it appears in the editor as "unsaved".
+                set(s => ({
+                    editorBuffers: { ...s.editorBuffers, [filePath]: proposedCode },
+                    suggestedChanges: null,
+                    activeFile: filePath // Take user to the changed file
+                }))
             },
 
             rejectSuggestions: () => {

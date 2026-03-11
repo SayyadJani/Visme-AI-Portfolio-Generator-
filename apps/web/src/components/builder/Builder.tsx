@@ -10,6 +10,7 @@ import {
     Settings, Wifi, WifiOff
 } from "lucide-react"
 import { useTemplateStore } from "@/stores/templateStore"
+import { templates } from "@/data/templates/index"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SandpackSyncBridge — pure logic, no UI
@@ -216,26 +217,34 @@ function StatusBar() {
 // Builder
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Builder() {
-    const { projectFiles, currentInstanceId } = useFileStore()
+    const { projectFiles, currentInstanceId, instances } = useFileStore()
+
+    const currentInstance = currentInstanceId ? instances[currentInstanceId] : null
+    const selectedTemplate = templates.find(t => t.id === currentInstance?.templateId)
 
     const sandpackFiles = React.useMemo(() => {
         console.log("[Builder] Computing sandpackFiles — instance:", currentInstanceId)
-        console.log("[Builder] Files:", Object.keys(projectFiles))
         return Object.fromEntries(
             Object.entries(projectFiles).map(([p, f]) => [p, { code: f.code }])
         )
-    }, [currentInstanceId]) // ✅ NOT [projectFiles]
+    }, [currentInstanceId]) 
 
-    if (!currentInstanceId) {
+    if (!currentInstanceId || !currentInstance) {
         return (
             <div className="h-screen w-screen bg-[#0b0b0e] flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
-                    <span className="text-white text-lg font-black">N</span>
+                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
+                    <Rocket className="text-white w-5 h-5" />
                 </div>
-                <p className="text-sm font-semibold uppercase tracking-widest">No project loaded</p>
+                <p className="text-sm font-semibold uppercase tracking-widest text-white">No project loaded</p>
                 <p className="text-xs text-muted-foreground/50">Go back and create a portfolio first</p>
             </div>
         )
+    }
+
+    const dependencies = {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        ...(selectedTemplate?.dependencies || {})
     }
 
     return (
@@ -251,8 +260,8 @@ export default function Builder() {
                 logLevel: 0 as any,
             }}
             customSetup={{
-                entry: "/src/index.js",
-                dependencies: { "react": "^18.2.0", "react-dom": "^18.2.0" }
+                entry: "src/index.js",
+                dependencies: dependencies
             }}
         >
             <SandpackSyncBridge />

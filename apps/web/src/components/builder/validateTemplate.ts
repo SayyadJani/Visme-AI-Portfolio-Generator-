@@ -24,14 +24,17 @@ export function validateTemplate(files: VirtualFileSystem): ValidationResult {
     const warnings: string[] = []
     const fixedFiles = { ...files }
 
-    // ─── Check 1: Entry file exists ──────────────────────────────────────────
-    // Sandpack template="react" looks for /src/index.js as entry
-    const hasIndexJs  = !!files["/src/index.js"]
-    const hasIndexJsx = !!files["/src/index.jsx"]
+    // Helper to check for a file with or without leading slash
+    const findFile = (name: string) => files[name] || files["/" + name]
 
-    if (!hasIndexJs && !hasIndexJsx) {
-        warnings.push("Missing /src/index.js — adding default React 18 entry file")
-        fixedFiles["/src/index.js"] = {
+    // ─── Check 1: Entry file exists ──────────────────────────────────────────
+    // Sandpack template="react" looks for src/index.js as entry
+    const indexJs  = findFile("src/index.js")
+    const indexJsx = findFile("src/index.jsx")
+
+    if (!indexJs && !indexJsx) {
+        warnings.push("Missing src/index.js — adding default React 18 entry file")
+        fixedFiles["src/index.js"] = {
             code: [
                 'import React from "react";',
                 'import { createRoot } from "react-dom/client";',
@@ -43,28 +46,14 @@ export function validateTemplate(files: VirtualFileSystem): ValidationResult {
             ].join("\n"),
             language: "javascript"
         }
-    } else if (!hasIndexJs && hasIndexJsx) {
-        warnings.push(
-            "You have /src/index.jsx but customSetup.entry expects /src/index.js. " +
-            "Either rename the file or update customSetup.entry."
-        )
     }
 
     // ─── Check 2: App component exists ───────────────────────────────────────
-    const hasAppJs  = !!files["/src/App.js"]
-    const hasAppJsx = !!files["/src/App.jsx"]
+    const appJs  = findFile("src/App.js")
+    const appJsx = findFile("src/App.jsx")
 
-    if (!hasAppJs && !hasAppJsx) {
-        errors.push(
-            "Missing App component. Add /src/App.js or /src/App.jsx. " +
-            "Sandpack template='react' expects /src/App.js by default."
-        )
-    } else if (!hasAppJs && hasAppJsx) {
-        warnings.push(
-            "/src/App.jsx found but template='react' expects /src/App.js. " +
-            "Sandpack may not resolve this correctly. " +
-            "Rename to App.js OR switch to template='react-ts' for .tsx files."
-        )
+    if (!appJs && !appJsx) {
+        errors.push("Missing App component. Add src/App.js or src/App.jsx.")
     }
 
     // ─── Check 3: index.js imports App correctly ──────────────────────────────
