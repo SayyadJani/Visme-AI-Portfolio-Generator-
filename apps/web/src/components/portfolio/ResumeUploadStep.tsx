@@ -54,11 +54,11 @@ export const ResumeUploadStep = ({ onContinue, onBack }: ResumeUploadStepProps) 
                             </div>
                             <div className="space-y-2">
                                 <p className="text-xl font-black tracking-tight">Drop your resume here</p>
-                                <p className="text-sm text-muted-foreground font-medium">Supports PDF files up to 10MB</p>
+                                <p className="text-sm text-muted-foreground font-medium">Supports PDF and DOCX files up to 10MB</p>
                             </div>
                             <label className="clay-button px-8 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest cursor-pointer hover:shadow-xl hover:shadow-primary/20 transition-all inline-block">
                                 Browse Files
-                                <input type="file" className="hidden" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                                <input type="file" className="hidden" accept=".pdf,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} />
                             </label>
                         </motion.div>
                     ) : (
@@ -75,7 +75,7 @@ export const ResumeUploadStep = ({ onContinue, onBack }: ResumeUploadStepProps) 
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-black truncate">{file.name}</p>
                                     <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
-                                        {(file.size / (1024 * 1024)).toFixed(2)} MB • PDF
+                                        {(file.size / (1024 * 1024)).toFixed(2)} MB • {file.name.split('.').pop()?.toUpperCase()}
                                     </p>
                                 </div>
                                 <button
@@ -129,7 +129,14 @@ export const ResumeUploadStep = ({ onContinue, onBack }: ResumeUploadStepProps) 
                 </button>
                 <button
                     disabled={!file}
-                    onClick={() => file && onContinue(file)}
+                    onClick={() => {
+                        if (file) {
+                            console.log("--- STEP 2: Resume Upload ---")
+                            console.log("File prepared for processing:", file.name)
+                            console.log("----------------------------")
+                            onContinue(file)
+                        }
+                    }}
                     className="flex-[2] lg:flex-1 clay-button h-16 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-sm hover:shadow-2xl hover:shadow-primary/30 active:scale-95 disabled:opacity-50 disabled:grayscale transition-all"
                 >
                     Process Resume

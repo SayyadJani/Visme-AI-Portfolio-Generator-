@@ -1,0 +1,40 @@
+# Frontend Feature Simulation Layer Documentation
+
+## Overview
+This document describes the temporary functional simulation layer implemented in the Portfolio Automation Tool. This layer allows for full end-to-end testing of the frontend workflow before the backend APIs are fully integrated.
+
+## Full Frontend Workflow
+The system simulates the following end-to-end user flow:
+
+1. **Dashboard Entry**: User navigates to the dashboard and initiates portfolio creation.
+2. **Template Selection**: User selects a portfolio aesthetic (e.g., "Neo-Brutalist Dev").
+3. **Resume Upload**: User uploads a resume PDF.
+4. **AI Processing (Simulation)**: A simulated "AI Engine" parses the resume.
+5. **Data Reconciliation**: User reviews and confirms the extracted professional data (Personal Info, Skills, Experience).
+6. **Portfolio Generation**: The system injects the confirmed data into the selected template's code files.
+7. **Builder Integration**: The Builder IDE opens automatically with the generated code loaded in Sandpack.
+8. **Live Preview**: The generated portfolio renders instantly in the preview window.
+
+## Mock Data Management
+All mock data is centralized in the `apps/web/src/data` directory:
+- `templates.ts`: Contains a catalog of available templates, including their full Virtual File System (VFS) structure.
+- `parsedResume.ts`: Example of raw parsed resume data.
+- `matchingResults.ts`: Simulates matching accuracy and field mapping results.
+- `userProfile.ts`: Mock data for the current logged-in user.
+
+## Backend Simulation Services
+Simulation logic is located in `apps/web/src/services/simulation.ts`. These functions simulate network latency and backend processing:
+
+- `simulateResumeParsing(file)`: Returns a `ReconciliationData` object after a 2-second delay.
+- `simulatePortfolioGeneration(data, template)`: Merges user data with template source code and returns a complete `VirtualFileSystem` ready for the IDE.
+
+## Builder Integration
+The simulation layer integrates with the global `useFileStore` (Zustand):
+- Once "Finish" is clicked in the Reconciliation step, `simulatePortfolioGeneration` creates the final code bundle.
+- The `loadFiles()` action in the store is called to replace the default VFS with the user's specific generated portfolio.
+- The router then redirects to `/dashboard/portfolios/builder`, which renders the new files in Sandpack.
+
+## Developer Notes
+- To test the flow, simply go to `/dashboard/portfolios/create`.
+- The simulation uses `setTimeout` to mimic real-world async behavior.
+- Injected data can be found in `/src/data/portfolioData.js` within the Builder IDE's file explorer.

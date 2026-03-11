@@ -9,40 +9,8 @@ import { PortfolioCard } from "@/components/dashboard/PortfolioCard"
 import { CreatePortfolioCard } from "@/components/dashboard/CreatePortfolioCard"
 import { TipCard } from "@/components/dashboard/TipCard"
 
-// Mock Data
-const stats = [
-    { title: "Total Views", value: "1,335", icon: Eye, trend: "12%", trendType: "up" as const },
-    { title: "Avg. Session", value: "2m 45s", icon: Clock, trend: "5%", trendType: "up" as const },
-    { title: "Conv. Rate", value: "3.2%", icon: MousePointer2, trend: "0.5%", trendType: "up" as const },
-    { title: "Templates", value: "3/12", icon: AppWindow },
-]
-
-const recentPortfolios = [
-    {
-        title: "Senior Frontend Lead 2024",
-        template: "Hyperdrive",
-        status: "Live" as const,
-        lastEdited: "2 days ago",
-        views: 432,
-        imageUrl: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=2344&auto=format&fit=crop"
-    },
-    {
-        title: "Fullstack Architecture",
-        template: "Minimalist Mono",
-        status: "Draft" as const,
-        lastEdited: "1 week ago",
-        views: 12,
-        imageUrl: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2340&auto=format&fit=crop"
-    },
-    {
-        title: "Open Source Contributor",
-        template: "Glassmorphism Pro",
-        status: "Live" as const,
-        lastEdited: "3 weeks ago",
-        views: 891,
-        imageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=2340&auto=format&fit=crop"
-    }
-]
+import { dashboardStats as stats, recentPortfolios } from "@/data/dashboard"
+import { userProfile } from "@/data/userProfile"
 
 export default function DashboardHome() {
     return (
@@ -62,7 +30,7 @@ export default function DashboardHome() {
                     <div className="flex items-center gap-4 flex-wrap">
                         <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">
                             Welcome back, <span className="text-primary italic relative">
-                                Felix!
+                                {userProfile.name.split(' ')[0]}!
                                 <svg className="absolute -bottom-2 left-0 w-full h-3 text-primary/20" viewBox="0 0 100 10" preserveAspectRatio="none">
                                     <path d="M0,5 Q50,10 100,5" stroke="currentColor" strokeWidth="8" fill="none" strokeLinecap="round" />
                                 </svg>

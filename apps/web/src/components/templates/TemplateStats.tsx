@@ -1,14 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { LayoutGrid, Timer, ShieldCheck, Laptop } from "lucide-react"
-
-const stats = [
-    { label: "Available Themes", value: "24+", icon: LayoutGrid },
-    { label: "Avg. Build Time", value: "< 2m", icon: Timer },
-    { label: "SEO Score", value: "98/100", icon: ShieldCheck },
-    { label: "Device Support", value: "All", icon: Laptop },
-]
+import { templateStats as stats } from "@/data/templates"
 
 export const TemplateStats = () => {
     return (

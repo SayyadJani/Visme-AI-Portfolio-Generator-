@@ -9,11 +9,12 @@ import { ControlBar } from "./parsing/ControlBar"
 import { MOCK_RECONCILIATION_DATA } from "./parsing/mockData"
 
 interface ReconciliationStepProps {
+    data: any
     onFinish: () => void
 }
 
-export const ParsingStep = ({ onFinish }: ReconciliationStepProps) => {
-    const reconciliationData = MOCK_RECONCILIATION_DATA;
+export const ParsingStep = ({ data, onFinish }: ReconciliationStepProps) => {
+    const reconciliationData = data || MOCK_RECONCILIATION_DATA;
 
     return (
         <div className="max-w-[1400px] mx-auto space-y-12 pb-48">

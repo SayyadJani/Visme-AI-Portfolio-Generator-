@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
+import { userProfile } from "@/data/userProfile"
 
 const navItems = [
     { icon: LayoutGrid, label: "Dashboard", href: "/dashboard" },
@@ -21,7 +22,6 @@ const navItems = [
     { icon: Palette, label: "Templates", href: "/dashboard/templates" },
     { icon: History, label: "History", href: "/dashboard/history" },
     { icon: User, label: "Profile", href: "/dashboard/profile" },
-    { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ]
 
 export const DashboardSidebar = () => {
@@ -78,13 +78,13 @@ export const DashboardSidebar = () => {
             <div className="pt-6 border-t border-border mt-auto space-y-4 py-6 px-3 w-full">
                 <button className="flex items-center gap-4 p-2.5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all w-full overflow-hidden">
                     <div className="w-8 h-8 rounded-xl overflow-hidden border border-border shadow-sm flex-shrink-0">
-                        <img src="https://i.pravatar.cc/150?u=felix" alt="User" className="w-full h-full object-cover" />
+                        <img src={userProfile.avatar} alt="User" className="w-full h-full object-cover" />
                     </div>
                     <div className={cn(
                         "text-left whitespace-nowrap transition-all duration-300",
                         isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
                     )}>
-                        <p className="text-xs font-bold leading-none">Felix .A</p>
+                        <p className="text-xs font-bold leading-none">{userProfile.name}</p>
                         <p className="text-[10px] text-muted-foreground mt-1">Pro Member</p>
                     </div>
                 </button>

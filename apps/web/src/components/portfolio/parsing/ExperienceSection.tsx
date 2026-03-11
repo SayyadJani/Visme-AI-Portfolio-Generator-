@@ -14,11 +14,11 @@ export const ExperienceSection = ({ data }: ExperienceSectionProps) => {
             <HeaderSection
                 title="Experience Timeline"
                 icon={Layers}
-                badge={`${data.experience.length} Roles Found`}
+                badge={`${(data.experience ?? []).length} Roles Found`}
                 subtitle="Professional history mapped to schema"
             />
             <div className="space-y-6">
-                {data.experience.map((exp, i) => (
+                {(data.experience ?? []).map((exp, i) => (
                     <div key={i} className="group relative bg-muted/20 border border-border/30 rounded-3xl p-8 hover:bg-muted/30 transition-all">
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
                             <div>

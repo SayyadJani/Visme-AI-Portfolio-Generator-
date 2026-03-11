@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { StepIndicator } from "@/components/portfolio/StepIndicator"
 import { TemplateSelectionStep } from "@/components/portfolio/TemplateSelectionStep"
@@ -9,26 +10,64 @@ import { ParsingStep } from "@/components/portfolio/ParsingStep"
 import { AIProcessingState } from "@/components/portfolio/AIProcessingState"
 import { FileText, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { templates } from "@/data/templates/index"
+import { useTemplateStore, Template } from "@/stores/templateStore"
+import { simulateResumeParsing, simulatePortfolioGeneration } from "@/services/simulation"
+import { useFileStore } from "@/components/builder/fileStore"
 
 export default function CreatePortfolioPage() {
-    const [currentStep, setCurrentStep] = useState(1)
+    const router = useRouter()
+    const { selectedTemplate, setSelectedTemplate } = useTemplateStore()
+    const { parsedResume, setResumeFile: storeSetResumeFile, performMockParsing, generateSuggestions } = useFileStore()
+
+    const [currentStep, setCurrentStep] = useState(() => selectedTemplate ? 2 : 1)
     const [isProcessing, setIsProcessing] = useState(false)
+    const [isGenerating, setIsGenerating] = useState(false)
+
     const steps = ["Template", "Resume", "Parsing"]
 
-    const handleNext = () => {
-        if (currentStep === 2) {
-            setIsProcessing(true)
-            setTimeout(() => {
-                setIsProcessing(false)
-                setCurrentStep(3)
-            }, 3000)
-        } else {
-            setCurrentStep(prev => Math.min(prev + 1, steps.length))
+    const handleTemplateSelect = (templateId: string) => {
+        const template = templates.find(t => t.id === templateId)
+        if (template) {
+            setSelectedTemplate(template as Template)
+            setCurrentStep(2)
         }
     }
+
+    const handleResumeUpload = async (file: File) => {
+        setIsProcessing(true)
+
+        try {
+            // STEP 2 & 3: Upload and Parse
+            await storeSetResumeFile(file)
+            await performMockParsing()
+            
+            setIsProcessing(false)
+            setCurrentStep(3)
+        } catch (error) {
+            console.error("Parsing failed", error)
+            setIsProcessing(false)
+        }
+    }
+
+    const handleFinish = async () => {
+        if (!selectedTemplate) return
+
+        setIsGenerating(true)
+
+        try {
+            // STEP 4: Information Matching (Generate Recommendations)
+            generateSuggestions()
+
+            // Redirect to builder where user will see Accept/Reject
+            router.push('/dashboard/portfolios/builder')
+        } catch (error) {
+            console.error("Generation failed", error)
+            setIsGenerating(false)
+        }
+    }
+
     const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 1))
-
-
 
     return (
         <div className={cn(
@@ -40,7 +79,7 @@ export default function CreatePortfolioPage() {
 
             {/* Header: Hide on Step 3 as it has its own header */}
             <AnimatePresence mode="wait">
-                {currentStep !== 3 && !isProcessing && (
+                {(currentStep !== 3 || isGenerating) && !isProcessing && !isGenerating && (
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -66,45 +105,53 @@ export default function CreatePortfolioPage() {
             </AnimatePresence>
 
             {/* Processing Header */}
-            {isProcessing && (
+            {(isProcessing || isGenerating) && (
                 <div className="text-center space-y-4 pt-12">
                     <motion.h1 className="text-5xl md:text-6xl font-black tracking-tighter">
-                        Processing Logic...
+                        {isGenerating ? "Generating Portfolio..." : "Processing Logic..."}
                     </motion.h1>
                     <motion.p className="text-muted-foreground text-lg md:text-xl font-medium">
-                        Our neural engine is analyzing your professional data.
+                        {isGenerating
+                            ? "Assembling components and injecting your professional story."
+                            : "Our neural engine is analyzing your professional data."}
                     </motion.p>
                 </div>
             )}
 
-            {currentStep !== 3 && !isProcessing && (
+            {currentStep !== 3 && !isProcessing && !isGenerating && (
                 <StepIndicator currentStep={currentStep} steps={steps} />
             )}
 
             <main className={cn(
                 "min-h-[600px]",
-                currentStep === 3 ? "pt-0" : ""
+                currentStep === 3 && !isGenerating ? "pt-0" : ""
             )}>
                 <AnimatePresence mode="wait">
                     <motion.div
-                        key={currentStep + (isProcessing ? "-proc" : "")}
+                        key={currentStep + (isProcessing ? "-proc" : "") + (isGenerating ? "-gen" : "")}
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.4, ease: "easeInOut" }}
                     >
-                        {isProcessing ? (
+                        {isProcessing || isGenerating ? (
                             <AIProcessingState />
                         ) : (
                             <>
                                 {currentStep === 1 && (
-                                    <TemplateSelectionStep onContinue={handleNext} />
+                                    <TemplateSelectionStep onContinue={(id) => handleTemplateSelect(id)} />
                                 )}
                                 {currentStep === 2 && (
-                                    <ResumeUploadStep onContinue={handleNext} onBack={handleBack} />
+                                    <ResumeUploadStep
+                                        onContinue={(file) => handleResumeUpload(file)}
+                                        onBack={handleBack}
+                                    />
                                 )}
                                 {currentStep === 3 && (
-                                    <ParsingStep onFinish={() => console.log('Finished')} />
+                                    <ParsingStep
+                                        data={parsedResume}
+                                        onFinish={handleFinish}
+                                    />
                                 )}
                             </>
                         )}

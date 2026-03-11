@@ -1,0 +1,67 @@
+================================================================================
+FIX LOG: Module Resolution Error for @codesandbox/sandpack-react
+================================================================================
+
+ERROR:
+"Module not found: Can't resolve '@codesandbox/sandpack-react'"
+Occurred during Next.js compilation in the apps/web workspace of the monorepo.
+
+ROOT CAUSE:
+The error was caused by Next.js 16.1's Turbopack bundler. Turbopack currently has known 
+limitations when tracing and resolving specific ESM module structures inside isolated 
+pnpm workspace symlinks (specifically with complex dependency trees like CodeSandbox's 
+Sandpack and Microsoft's Monaco Editor). 
+
+Even though the dependencies were correctly installed in `apps/web/node_modules` and 
+the pnpm workspace configuration was correct, Turbopack failed to resolve them.
+
+--------------------------------------------------------------------------------
+STEPS TAKEN TO FIX:
+--------------------------------------------------------------------------------
+
+1. Verification of Dependencies:
+   - Verified that `@codesandbox/sandpack-react`, `@codesandbox/sandpack-themes`, 
+     and `@monaco-editor/react` were correctly added to `apps/web/package.json`.
+   - Verified that `pnpm-workspace.yaml` correctly included `apps/*`.
+   - Verified node_modules structure was correct using `pnpm why`.
+
+2. Next.js Configuration Update (Monorepo Fix):
+   - Updated `apps/web/next.config.js` to include the workspace packages in `transpilePackages`.
+   - This ensures Next.js/Webpack knows it needs to transpile these external ESM 
+     dependencies before bundling.
+   
+   // apps/web/next.config.js
+   const nextConfig = {
+     transpilePackages: [
+       "@codesandbox/sandpack-react",
+       "@codesandbox/sandpack-themes",
+       "@monaco-editor/react"
+     ]
+   };
+
+3. Bypassing Turbopack (The Actual Fix):
+   - Confirmed the issue was isolated to Turbopack by running the build with the legacy 
+     Webpack bundler via `next build --webpack`, which compiled successfully.
+   - Modified `apps/web/package.json` to explicitly bypass Turbopack for both local 
+     development and production builds.
+
+   // apps/web/package.json
+   "scripts": {
+     "dev": "next dev --webpack --port 3000",
+     "build": "next build --webpack",
+     ...
+   }
+
+4. Clean Installation:
+   - Ran `pnpm install --force` to completely rebuild the `node_modules` symlinks 
+     across the workspace and flush any corrupted cache from previous failed builds.
+
+--------------------------------------------------------------------------------
+RESOLUTION SUMMARY:
+--------------------------------------------------------------------------------
+By switching the Next.js compilation engine specifically in the `web` workspace from 
+the experimental Turbopack back to Webpack (`--webpack` flag), the Sandpack and Monaco 
+Editor dependencies are now resolved perfectly within the pnpm monorepo structure.
+
+The dev server now runs flawlessly, and `pnpm --filter web exec next build` compiles 
+without any module resolution errors.

@@ -1,7 +1,10 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Zap, ShieldCheck, Palette, ArrowRight } from "lucide-react"
+import { Zap, ShieldCheck, Palette, ArrowRight, RefreshCw } from "lucide-react"
+import { useTemplateStore } from "@/stores/templateStore"
+import { templates } from "@/data/templates/index"
+import Link from "next/link"
 
 const features = [
     { icon: Zap, title: "Fast Load", desc: "Optimized images and lightweight JS." },
@@ -10,10 +13,26 @@ const features = [
 ]
 
 interface TemplateSelectionStepProps {
-    onContinue: () => void
+    onContinue: (templateId: string) => void
 }
 
 export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps) => {
+    const { selectedTemplate, setSelectedTemplate } = useTemplateStore()
+
+    // Default to the developer template if nothing is selected
+    const fallback = templates[0]
+    const displayTemplate = selectedTemplate ?? fallback
+
+    if (!displayTemplate) return null
+
+    const handleContinue = () => {
+        if (!selectedTemplate) {
+            // auto-select the default
+            setSelectedTemplate(templates[0] as any)
+        }
+        onContinue(displayTemplate.id)
+    }
+
     return (
         <div className="space-y-12 max-w-4xl mx-auto">
             <div className="space-y-4 text-center lg:text-left">
@@ -28,8 +47,8 @@ export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps
             >
                 <div className="aspect-video overflow-hidden">
                     <img
-                        src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2340&auto=format&fit=crop"
-                        alt="Selected Template"
+                        src={displayTemplate.previewImage}
+                        alt={displayTemplate.name}
                         className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -40,10 +59,21 @@ export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                         Selected Template
                     </div>
-                    <h3 className="text-4xl font-black text-white tracking-tighter">Neo-Noir Developer</h3>
+                    <h3 className="text-4xl font-black text-white tracking-tighter">{displayTemplate.name}</h3>
                     <p className="text-white/70 max-w-xl font-medium leading-relaxed">
-                        A high-contrast, typography-focused design perfect for senior full-stack engineers and architects.
+                        {displayTemplate.description}
                     </p>
+                </div>
+
+                {/* Change Template link */}
+                <div className="absolute top-4 right-4">
+                    <Link
+                        href="/dashboard/templates"
+                        className="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-sm text-white text-xs font-bold rounded-lg border border-white/10 hover:bg-black/80 transition-all"
+                    >
+                        <RefreshCw className="w-3 h-3" />
+                        Change Template
+                    </Link>
                 </div>
             </motion.div>
 
@@ -68,7 +98,7 @@ export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps
             </div>
 
             <button
-                onClick={onContinue}
+                onClick={handleContinue}
                 className="w-full clay-button h-16 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-sm hover:shadow-2xl hover:shadow-primary/30 active:scale-95 flex items-center justify-center gap-3"
             >
                 Confirm Template & Continue

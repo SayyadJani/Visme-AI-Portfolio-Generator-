@@ -18,7 +18,7 @@ export const SidePanel = ({ data }: SidePanelProps) => {
                     <h3 className="font-black text-xs uppercase tracking-[0.2em]">Required Actions</h3>
                 </div>
                 <div className="space-y-4">
-                    {data.missingRequired.map(item => (
+                    {(data.missingRequired ?? []).map(item => (
                         <GlassCard key={item.id} className="border-amber-500/20 bg-amber-500/[0.02] p-8 space-y-4 shadow-amber-500/[0.02]">
                             <div className="space-y-2">
                                 <h4 className="font-black text-base tracking-tight">{item.title}</h4>
@@ -46,7 +46,7 @@ export const SidePanel = ({ data }: SidePanelProps) => {
                     <h3 className="font-black text-xs uppercase tracking-[0.2em]">Contextual Data</h3>
                 </div>
                 <div className="space-y-4">
-                    {data.orphanedData.map(item => (
+                    {(data.orphanedData ?? []).map(item => (
                         <GlassCard key={item.id} className="p-8 space-y-6 hover:translate-y-[-2px] transition-transform">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">

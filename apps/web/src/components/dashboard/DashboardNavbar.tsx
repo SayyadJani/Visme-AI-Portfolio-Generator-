@@ -47,9 +47,9 @@ export const DashboardNavbar = () => {
                         <Bell className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-primary rounded-full ring-2 ring-background" />
                     </button>
-                    <button className="w-10 h-10 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border flex items-center justify-center transition-all group active:scale-95">
+                    <Link href="/dashboard/profile" className="w-10 h-10 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border flex items-center justify-center transition-all group active:scale-95">
                         <Settings className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-all group-hover:rotate-90 duration-500" />
-                    </button>
+                    </Link>
                 </div>
             </div>
         </nav>

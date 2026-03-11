@@ -4,7 +4,7 @@ import { Search, Filter } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 
-const categories = ["All", "Minimal", "Creative", "Developer", "Corporate", "Modern"]
+import { templateCategories as categories } from "@/data/templates"
 
 export const TemplateFilters = () => {
     const [active, setActive] = useState("All")

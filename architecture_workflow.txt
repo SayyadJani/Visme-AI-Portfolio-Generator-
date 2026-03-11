@@ -1,0 +1,52 @@
+# Portfolio Builder Architecture & Workflow Refactor
+
+## 1. The Core Philosophy
+The previous implementation had a major flaw: it was editing the **template source code** directly. This meant once a user edited a "Developer Portfolio", the original template was modified for everyone.
+
+The new architecture follows a **Template → Instance** pattern:
+1. **Templates**: Static, read-only "blueprints" stored in the codebase.
+2. **Instances**: Editable "clones" of a template. Each user project is a unique instance stored in the browser's memory (simulating a database).
+
+---
+
+## 2. Key Changes Made
+
+### A. State Management State (`fileStore.ts`)
+- **Instances Map**: Instead of a single list of files, we now have `instances: Record<string, Instance>`.
+- **Zustand Persistence**: We added the `persist` middleware. This means if you refresh the page, your project instances and their code changes are **automatically saved** in `localStorage`.
+- **Instance Actions**: 
+    - `createInstance`: Clones a template's files into a new project.
+    - `setCurrentInstance`: Switches the editor to a specific project.
+    - `updateFile`, `addFile`, etc.: These now only affect the **currently active instance**.
+
+### B. IDE Builder Component (`Builder.tsx`)
+- **Multi-Project Support**: The IDE now identifies which project is active and loads its specific files.
+- **Example Initialization**: We added a loop that creates 4 example instances (`instance-1` to `instance-4`) the first time the app is opened. This allows you to test switching between projects immediately.
+- **Sandpack Integration**: The Preview system (Sandpack) now receives the files from the specific instance being edited.
+
+### C. UI Synchronization
+- **File Explorer**: Now has a "Project Switcher" at the top so you can jump between your different portfolio projects.
+- **Code Editor**: The tab bar and the code content update instantly when you switch instances.
+
+---
+
+## 3. The New Workflow (How it Works Now)
+
+### Path A: Starting from a Template
+1. User goes to the **Template Library**.
+2. User clicks **"Use Template"**.
+3. `TemplateCard` calls `createInstance`. This creates a **copy** of the template files and gives it a unique ID.
+4. The user is redirected to the **Builder** with their new instance active.
+
+### Path B: Resuming Work
+1. User opens the **Builder**.
+2. The `fileStore` loads all saved projects from `localStorage`.
+3. If no project is selected, the system defaults to the last used project or an example instance.
+4. User selects a file in the **File Explorer**, edits code in **Monaco**, and the **Sandpack Preview** updates in real-time for that specific project.
+
+---
+
+## 4. Technical Benefits
+- **Backend Ready**: The logic of "fetching instances" and "saving files" is now isolated. When we add a real backend, we just need to replace the `localStorage` logic with API calls.
+- **Safety**: Editing code in one project never affects another project, even if they used the same template.
+- **Persistence**: No more losing work on refresh!

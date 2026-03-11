@@ -7,53 +7,7 @@ import { TemplateStats } from "@/components/templates/TemplateStats"
 import { TemplateFilters } from "@/components/templates/TemplateFilters"
 import { CustomLayoutBanner } from "@/components/templates/CustomLayoutBanner"
 
-const templates = [
-    {
-        title: "Neo-Brutalist Dev",
-        category: "Creative",
-        description: "High contrast, bold typography, and a unique grid-based layout for experimental portfolios.",
-        tags: ["React", "Tailwind", "Framer"],
-        imageUrl: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2340&auto=format&fit=crop",
-        badge: "New" as const
-    },
-    {
-        title: "Minimalist Architect",
-        category: "Minimal",
-        description: "Focus on whitespace and clean typography. Perfect for backend engineers who value clarity.",
-        tags: ["Vue", "CSS Modules"],
-        imageUrl: "https://images.unsplash.com/photo-1481487196290-c152efe083f5?q=80&w=2324&auto=format&fit=crop",
-        badge: "Popular" as const
-    },
-    {
-        title: "The Terminal Pro",
-        category: "Developer",
-        description: "A dark-mode first, command-line inspired interface with interactive terminal components.",
-        tags: ["Next.js", "TypeScript"],
-        imageUrl: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2340&auto=format&fit=crop"
-    },
-    {
-        title: "Corporate Executive",
-        category: "Corporate",
-        description: "Professional, polished, and structured. Ideal for management-level technical roles.",
-        tags: ["Modern", "SEO Ready"],
-        imageUrl: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2340&auto=format&fit=crop"
-    },
-    {
-        title: "Bento Box Portfolio",
-        category: "Modern",
-        description: "Modular sections that highlight various projects and skills in an organized tile layout.",
-        tags: ["Bento", "Grid"],
-        imageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop",
-        badge: "New" as const
-    },
-    {
-        title: "Glassmorphism Flow",
-        category: "Creative",
-        description: "Soft blurs, vibrant gradients, and elegant translucency for a cutting-edge frontend look.",
-        tags: ["SCSS", "Glass"],
-        imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2264&auto=format&fit=crop"
-    }
-]
+import { templates } from "@/data/templates/index"
 
 export default function TemplatesPage() {
     return (
@@ -84,7 +38,7 @@ export default function TemplatesPage() {
             {/* Templates Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                 {templates.map((tpl, i) => (
-                    <TemplateCard key={tpl.title} {...tpl} delay={i * 0.1 + 0.5} />
+                    <TemplateCard key={tpl.id} {...tpl} delay={i * 0.1 + 0.5} />
                 ))}
             </div>
 

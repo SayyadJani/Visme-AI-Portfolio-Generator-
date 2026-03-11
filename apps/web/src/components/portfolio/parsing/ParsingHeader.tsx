@@ -27,7 +27,7 @@ export const ParsingHeader = ({ data }: ParsingHeaderProps) => {
             </div>
             <div className="bg-primary/5 border border-primary/10 rounded-3xl p-6 flex items-center gap-6">
                 <div className="text-right space-y-1">
-                    <p className="text-3xl font-black tracking-tighter text-primary">{data.accuracy}</p>
+                    <p className="text-3xl font-black tracking-tighter text-primary">{data.accuracy ?? "—"}</p>
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Across 42 data points</p>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30">

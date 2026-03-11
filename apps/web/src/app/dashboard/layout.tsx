@@ -1,11 +1,28 @@
+"use client"
+
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar"
 import { DashboardNavbar } from "@/components/dashboard/DashboardNavbar"
+import { usePathname } from "next/navigation"
 
 export default function DashboardLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
+    const pathname = usePathname()
+    const isBuilderPage = pathname === "/dashboard/portfolios/builder"
+
+    if (isBuilderPage) {
+        return (
+            <div className="h-screen w-screen overflow-hidden bg-[#0b0b0e] text-foreground select-none relative">
+                {/* Immersive container for the IDE - no dashboard UI */}
+                <main className="h-full w-full relative z-10">
+                    {children}
+                </main>
+            </div>
+        )
+    }
+
     return (
         <div className="h-screen w-screen overflow-hidden bg-background text-foreground flex flex-col select-none relative">
             {/* Top Navbar - Fixed height 80px */}
@@ -42,3 +59,4 @@ export default function DashboardLayout({
         </div>
     )
 }
+

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { Sparkles, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { tipOfTheWeek as tip } from "@/data/dashboard"
 
 export const TipCard = () => {
     return (
@@ -19,16 +20,18 @@ export const TipCard = () => {
                 <div className="flex-1 space-y-6">
                     <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-primary/10 text-primary self-start border border-primary/10 shadow-sm">
                         <Sparkles className="w-4 h-4" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.2em]">Strategy of the Week</span>
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em]">{tip.badge}</span>
                     </div>
 
                     <div className="space-y-4">
                         <h2 className="text-4xl font-black tracking-tighter leading-[1.1]">
-                            Consistency defines the <span className="text-primary italic">Top 1%</span> of developers.
+                            {tip.title.split(tip.highlight)[0]}
+                            <span className="text-primary italic">{tip.highlight}</span>
+                            {tip.title.split(tip.highlight)[1]}
                         </h2>
 
                         <p className="text-muted-foreground text-lg md:text-xl font-medium leading-relaxed max-w-2xl">
-                            Syncing your GitHub brand colors with your portfolio creates an instant "trust-factor" for hiring managers.
+                            {tip.description}
                         </p>
                     </div>
 
@@ -46,7 +49,7 @@ export const TipCard = () => {
                 <div className="hidden lg:block w-80 aspect-square relative rounded-[2rem] overflow-hidden border border-border shadow-2xl p-4 bg-muted/20">
                     <div className="w-full h-full rounded-[1.5rem] overflow-hidden relative">
                         <img
-                            src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop"
+                            src={tip.imageUrl}
                             alt="Tip illustration"
                             className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 ease-in-out scale-110 group-hover:scale-100"
                         />
