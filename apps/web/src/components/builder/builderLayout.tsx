@@ -145,6 +145,7 @@ export default function BuilderLayout() {
             </div>
 
             {/* Activities & Sidebar Handlers handled inside subcomponents */}
+            <SandpackDiagnostics />
         </div>
     )
 }

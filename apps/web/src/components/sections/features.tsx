@@ -1,9 +1,10 @@
 "use client"
 
+import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { UploadCloud, Bolt, Palette, Code2 } from "lucide-react"
 
-export const Features = () => {
+export const Features = memo(() => {
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -74,4 +75,6 @@ export const Features = () => {
             </div>
         </section>
     )
-}
+})
+
+Features.displayName = "Features"

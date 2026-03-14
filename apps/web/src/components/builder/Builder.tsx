@@ -37,33 +37,38 @@ function SandpackSyncBridge() {
 
         let allOk = true
         Object.entries(pendingSandpackSync.files).forEach(([path, code]) => {
+            const cleanPath = path.startsWith("/") ? path.slice(1) : path
             try {
-                sandpack.updateFile(path, code)
-                const received = (sandpack.files as any)[path]?.code
+                sandpack.updateFile(cleanPath, code)
+                const received = (sandpack.files as any)[cleanPath]?.code
                 if (received === code) {
-                    console.log(`[Bridge] ✅ "${path}" — verified`)
+                    console.log(`[Bridge] ✅ "${cleanPath}" — verified sync`)
                 } else {
-                    console.warn(`[Bridge] ⚠️ "${path}" — MISMATCH`)
+                    console.warn(`[Bridge] ⚠️ "${cleanPath}" — verification failed for "${cleanPath}"`)
+                    allOk = false
                 }
             } catch (err) {
-                console.error(`[Bridge] ❌ updateFile("${path}") threw:`, err)
+                console.error(`[Bridge] ❌ updateFile("${cleanPath}") error:`, err)
                 allOk = false
             }
         })
 
-        if (!allOk) { clearPendingSync(); console.groupEnd(); return }
+        if (!allOk) { 
+            console.log("[Bridge] Partial sync issues, skipping runSandpack")
+            // Still clear it so we don't loop forever
+        }
 
         try {
             sandpack.runSandpack()
-            console.log("[Bridge] ✅ runSandpack() called")
+            console.log("[Bridge] 🚀 runSandpack() triggered")
         } catch (err) {
-            console.warn("[Bridge] runSandpack() unavailable:", err)
+            console.warn("[Bridge] runSandpack() hint:", err)
             try { (sandpack as any).dispatch?.({ type: "refresh" }) } catch { /* noop */ }
         }
 
         console.groupEnd()
         clearPendingSync()
-    }, [pendingSandpackSync?.seq, sandpack.status]) // eslint-disable-line
+    }, [pendingSandpackSync?.seq, sandpack.status])
 
     return null
 }
@@ -144,7 +149,7 @@ function TopNav() {
             {/* Right — actions */}
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1 bg-[#16161a] p-1 rounded-lg border border-[#1c1c22]">
-                    <button 
+                    <button
                         onClick={toggleFullscreen}
                         className="p-1.5 hover:bg-[#1c1c22] rounded-md text-muted-foreground hover:text-foreground transition-all duration-200"
                         title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
@@ -175,7 +180,7 @@ function TopNav() {
 // Bottom Status Bar
 // ─────────────────────────────────────────────────────────────────────────────
 function StatusBar() {
-    const { activeFile, projectFiles } = useFileStore()
+    const activeFile = useFileStore(s => s.activeFile)
     const { sandpack } = useSandpack()
 
     const isReady = sandpack.status === "running" || sandpack.status === "idle"
@@ -197,6 +202,12 @@ function StatusBar() {
                 </div>
             </div>
             <div className="flex items-center gap-5">
+                <button
+                    onClick={() => useFileStore.getState().forceRefresh()}
+                    className="px-2 py-0.5 rounded border border-[#1c1c22] hover:bg-[#1c1c22] transition-colors"
+                >
+                    Hard Reset Preview
+                </button>
                 {activeFile && (
                     <div className="flex items-center gap-3">
                         <span className="text-indigo-400/80">{activeFile}</span>
@@ -217,17 +228,23 @@ function StatusBar() {
 // Builder
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Builder() {
-    const { projectFiles, currentInstanceId, instances } = useFileStore()
+    const currentInstanceId = useFileStore(s => s.currentInstanceId)
+    const instances = useFileStore(s => s.instances)
+    const refreshKey = useFileStore(s => s.refreshKey)
 
     const currentInstance = currentInstanceId ? instances[currentInstanceId] : null
     const selectedTemplate = templates.find(t => t.id === currentInstance?.templateId)
 
     const sandpackFiles = React.useMemo(() => {
-        console.log("[Builder] Computing sandpackFiles — instance:", currentInstanceId)
+        const projectFiles = useFileStore.getState().projectFiles
+        console.log("[Builder] ⚡ Computing mount-time sandpackFiles — instance:", currentInstanceId)
         return Object.fromEntries(
-            Object.entries(projectFiles).map(([p, f]) => [p, { code: f.code }])
+            Object.entries(projectFiles).map(([p, f]) => [
+                p.startsWith("/") ? p.slice(1) : p,
+                { code: f.code }
+            ])
         )
-    }, [currentInstanceId]) 
+    }, [currentInstanceId, refreshKey]) // NOT projectFiles! Bridge handles updates.
 
     if (!currentInstanceId || !currentInstance) {
         return (
@@ -247,9 +264,10 @@ export default function Builder() {
         ...(selectedTemplate?.dependencies || {})
     }
 
+
     return (
         <SandpackProvider
-            key={currentInstanceId}
+            key={`${currentInstanceId}-${refreshKey}`}
             template="react"
             files={sandpackFiles}
             options={{

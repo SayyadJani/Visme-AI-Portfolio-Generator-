@@ -1,17 +1,18 @@
 "use client"
 
+import React, { memo } from "react"
 import Link from "next/link"
 import { Sparkles, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
 
-export const Navbar = () => {
+export const Navbar = memo(() => {
     return (
         <motion.nav
-            initial={{ y: -20, opacity: 0 }}
+            initial={{ y: -15, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.5 }}
             className="fixed top-0 left-0 right-0 z-50 px-6 py-4"
         >
             <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-2.5 bg-background/50 backdrop-blur-2xl border border-border rounded-2xl clay-card">
@@ -51,6 +52,7 @@ export const Navbar = () => {
                                 src="https://i.pravatar.cc/150?u=jane"
                                 alt="Profile"
                                 className="h-full w-full rounded-full border-2 border-background"
+                                loading="lazy"
                             />
                         </div>
                     </div>
@@ -68,4 +70,6 @@ export const Navbar = () => {
             </div>
         </motion.nav>
     )
-}
+})
+
+Navbar.displayName = "Navbar"

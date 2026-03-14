@@ -1,22 +1,25 @@
 "use client"
 
+import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { Bolt, Quote } from "lucide-react"
 
-export const Testimonial = () => {
+export const Testimonial = memo(() => {
     return (
         <section className="py-32 px-6 relative overflow-hidden bg-transparent">
             <motion.div
-                initial={{ opacity: 0, y: 50 }}
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 0.7 }}
                 viewport={{ once: true }}
+                style={{ willChange: "transform, opacity" }}
                 className="max-w-4xl mx-auto clay-card bg-primary p-12 md:p-16 relative overflow-hidden group shadow-[0_20px_50px_rgba(37,99,235,0.3)]"
             >
                 {/* Decorative Background Icon */}
                 <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                    transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+                    style={{ willChange: "transform" }}
                     className="absolute -bottom-20 -right-20 pointer-events-none opacity-5"
                 >
                     <Bolt className="w-96 h-96 text-white" />
@@ -35,6 +38,7 @@ export const Testimonial = () => {
                                 src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=256&h=256&auto=format&fit=crop"
                                 alt="Sarah Drasner"
                                 className="w-full h-full object-cover"
+                                loading="lazy"
                             />
                         </div>
                         <div>
@@ -46,4 +50,6 @@ export const Testimonial = () => {
             </motion.div>
         </section>
     )
-}
+})
+
+Testimonial.displayName = "Testimonial"

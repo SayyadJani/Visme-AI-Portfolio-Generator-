@@ -156,7 +156,14 @@ function FileItem({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function FileExplorer() {
-    const { instances, currentInstanceId, projectFiles, activeFile, setActiveFile, addFile, removeFile, setCurrentInstance } = useFileStore()
+    const instances = useFileStore(s => s.instances)
+    const currentInstanceId = useFileStore(s => s.currentInstanceId)
+    const projectFiles = useFileStore(s => s.projectFiles)
+    const activeFile = useFileStore(s => s.activeFile)
+    const setActiveFile = useFileStore(s => s.setActiveFile)
+    const addFile = useFileStore(s => s.addFile)
+    const removeFile = useFileStore(s => s.removeFile)
+    const setCurrentInstance = useFileStore(s => s.setCurrentInstance)
     const [isCreating, setIsCreating] = useState(false)
     const [newFileName, setNewFileName] = useState("")
     const [filter, setFilter] = useState("")
@@ -164,7 +171,7 @@ export default function FileExplorer() {
 
     const currentInstance = currentInstanceId ? instances[currentInstanceId] : null
     const paths = Object.keys(projectFiles)
-    
+
     const filteredPaths = useMemo(() => {
         if (!filter) return paths
         return paths.filter(p => p.toLowerCase().includes(filter.toLowerCase()))
@@ -190,7 +197,7 @@ export default function FileExplorer() {
         <aside className="flex flex-col h-full bg-[#0f0f12] select-none border-r border-[#1c1c22]">
             {/* Instance Switcher (Simulated Backend) */}
             <div className="px-3 py-2 border-b border-[#1c1c22] bg-[#16161b]/50">
-                <button 
+                <button
                     onClick={() => setShowInstanceSwitcher(!showInstanceSwitcher)}
                     className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#1c1c22] transition-colors group"
                 >
@@ -202,10 +209,10 @@ export default function FileExplorer() {
                     </div>
                     <ChevronDown className={cn("w-3 h-3 text-muted-foreground transition-transform", showInstanceSwitcher && "rotate-180")} />
                 </button>
-                
+
                 <AnimatePresence>
                     {showInstanceSwitcher && (
-                        <motion.div 
+                        <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
@@ -220,8 +227,8 @@ export default function FileExplorer() {
                                     }}
                                     className={cn(
                                         "w-full text-left px-2 py-1.5 rounded text-[10px] font-bold transition-colors",
-                                        inst.instanceId === currentInstanceId 
-                                            ? "bg-indigo-500/10 text-indigo-400" 
+                                        inst.instanceId === currentInstanceId
+                                            ? "bg-indigo-500/10 text-indigo-400"
                                             : "text-muted-foreground hover:bg-[#1c1c22] hover:text-foreground"
                                     )}
                                 >

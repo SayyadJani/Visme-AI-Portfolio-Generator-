@@ -31,7 +31,11 @@ interface FileStoreState {
     saveFile: (path: string) => void
     saveAllFiles: () => void
     applyAIChanges: (changes: Array<{ filePath: string; proposedCode: string }>) => void
+    addFile: (path: string, code: string) => void
+    removeFile: (path: string) => void
     clearPendingSync: () => void
+    forceRefresh: () => void // New method to force re-key
+    refreshKey: number
     setResumeFile: (file: File) => void
     performMockParsing: () => Promise<void>
     generateSuggestions: () => void
@@ -50,6 +54,7 @@ export const useFileStore = create<FileStoreState>()(
             activeFile: "",
             editorBuffers: {},
             pendingSandpackSync: null,
+            refreshKey: 0,
             resumeFile: null,
             resumeText: null,
             parsedResume: null,
@@ -106,16 +111,16 @@ export const useFileStore = create<FileStoreState>()(
             generateSuggestions: () => {
                 const { currentInstanceId, instances, parsedResume, projectFiles } = get()
                 if (!currentInstanceId || !parsedResume) return
-                
+
                 // Find the data file in the CURRENT project files
                 const dataPath = Object.keys(projectFiles).find(p => p.includes("portfolioData"))
                 if (!dataPath) return
-                
+
                 const fileEntry = projectFiles[dataPath]
                 if (!fileEntry) return
-                
+
                 const originalCode = fileEntry.code
-                
+
                 // Simulation of "Smart Comparison" logic
                 // In a real app, this would be a DIFF or a structured merge
                 const proposedCode = [
@@ -138,16 +143,20 @@ export const useFileStore = create<FileStoreState>()(
                 if (validation.fixedFiles) filesCopy = validation.fixedFiles
 
                 const id = `inst-${Date.now()}`
+                // Normalize all keys in filesCopy
+                const normalizedFiles: VirtualFileSystem = {}
+                Object.entries(filesCopy).forEach(([p, f]) => {
+                    normalizedFiles[normalizePath(p)] = f
+                })
+
                 const newInstance: Instance = {
                     instanceId: id, templateId: tId, name,
-                    files: filesCopy, createdAt: Date.now(), updatedAt: Date.now()
+                    files: normalizedFiles, createdAt: Date.now(), updatedAt: Date.now()
                 }
 
-                const activeFile = filesCopy["/src/App.js"]  ? "/src/App.js"
-                                 : filesCopy["src/App.js"]   ? "src/App.js"
-                                 : filesCopy["/src/App.jsx"] ? "/src/App.jsx"
-                                 : filesCopy["src/App.jsx"]  ? "src/App.jsx"
-                                 : Object.keys(filesCopy)[0] ?? ""
+                const activeFile = normalizedFiles["src/App.js"] ? "src/App.js"
+                    : normalizedFiles["src/App.jsx"] ? "src/App.jsx"
+                        : Object.keys(normalizedFiles)[0] ?? ""
 
                 console.group("%c[Store] createInstance", "color:#00d4aa;font-weight:bold")
                 console.log("  id         :", id)
@@ -158,7 +167,7 @@ export const useFileStore = create<FileStoreState>()(
                 set({
                     instances: { ...get().instances, [id]: newInstance },
                     currentInstanceId: id,
-                    projectFiles: filesCopy,
+                    projectFiles: normalizedFiles,
                     activeFile,
                     editorBuffers: {},
                     pendingSandpackSync: null,
@@ -169,9 +178,9 @@ export const useFileStore = create<FileStoreState>()(
             setCurrentInstance: (id) => {
                 const inst = get().instances[id]
                 if (!inst) return
-                const activeFile = inst.files["/src/App.js"] ? "/src/App.js" 
-                                 : inst.files["src/App.js"] ? "src/App.js"
-                                 : Object.keys(inst.files)[0]
+                const activeFile = inst.files["src/App.js"] ? "src/App.js"
+                    : inst.files["src/App.jsx"] ? "src/App.jsx"
+                        : Object.keys(inst.files)[0]
                 console.log("[Store] setCurrentInstance →", id)
                 set({ currentInstanceId: id, projectFiles: inst.files, activeFile, editorBuffers: {}, pendingSandpackSync: null })
             },
@@ -180,7 +189,8 @@ export const useFileStore = create<FileStoreState>()(
             updateFile: (path, code) => set(s => {
                 const id = s.currentInstanceId
                 if (!id || !s.instances[id]) { console.error("[Store] updateFile: no instance!"); return s }
-                const updatedFiles: VirtualFileSystem = { ...s.projectFiles, [path]: { code, language: inferLanguage(path) } }
+                const normalizedPath = normalizePath(path)
+                const updatedFiles: VirtualFileSystem = { ...s.projectFiles, [normalizedPath]: { code, language: inferLanguage(normalizedPath) } }
                 return {
                     projectFiles: updatedFiles,
                     instances: { ...s.instances, [id]: { ...s.instances[id], files: updatedFiles, updatedAt: Date.now() } }
@@ -219,8 +229,9 @@ export const useFileStore = create<FileStoreState>()(
                     const next = { ...s.editorBuffers }
                     delete next[path]
                     const seq = ++syncSeq
-                    console.log(`[Store] 🔔 pendingSandpackSync → seq=${seq} file="${path}"`)
-                    return { editorBuffers: next, pendingSandpackSync: { seq, files: { [path]: code } } }
+                    const normalizedPath = normalizePath(path)
+                    console.log(`[Store] 🔔 pendingSandpackSync → seq=${seq} file="${normalizedPath}"`)
+                    return { editorBuffers: next, pendingSandpackSync: { seq, files: { [normalizedPath]: code } } }
                 })
             },
 
@@ -229,8 +240,12 @@ export const useFileStore = create<FileStoreState>()(
                 const paths = Object.keys(editorBuffers)
                 if (!paths.length) return
                 const payload: Record<string, string> = {}
-                paths.forEach(p => { updateFile(p, editorBuffers[p]!); payload[p] = editorBuffers[p]! })
-                console.log("[Store] saveAllFiles →", paths)
+                paths.forEach(p => {
+                    const normalized = normalizePath(p)
+                    updateFile(normalized, editorBuffers[p]!)
+                    payload[normalized] = editorBuffers[p]!
+                })
+                console.log("[Store] saveAllFiles →", Object.keys(payload))
                 set({ editorBuffers: {}, pendingSandpackSync: { seq: ++syncSeq, files: payload } })
             },
 
@@ -238,13 +253,14 @@ export const useFileStore = create<FileStoreState>()(
             applyAIChanges: (changes) => {
                 const payload: Record<string, string> = {}
                 changes.forEach(({ filePath, proposedCode }) => {
-                    console.log(`[Store] applyAIChanges → "${filePath}"`)
-                    get().updateFile(filePath, proposedCode)
-                    payload[filePath] = proposedCode
+                    const normalized = normalizePath(filePath)
+                    console.log(`[Store] applyAIChanges → "${normalized}"`)
+                    get().updateFile(normalized, proposedCode)
+                    payload[normalized] = proposedCode
                 })
                 set(s => {
                     const next = { ...s.editorBuffers }
-                    changes.forEach(({ filePath }) => delete next[filePath])
+                    changes.forEach(({ filePath }) => delete next[normalizePath(filePath)])
                     return { editorBuffers: next, pendingSandpackSync: { seq: ++syncSeq, files: payload } }
                 })
             },
@@ -257,7 +273,7 @@ export const useFileStore = create<FileStoreState>()(
                 const { filePath, proposedCode } = suggestedChanges
 
                 console.log(`%c[Store] 🤖 AI Accept → Buffer for "${filePath}"`, "color:#f59e0b;font-weight:bold")
-                
+
                 // IMPORTANT: We do NOT update VFS here. 
                 // We only put it in the buffer so it appears in the editor as "unsaved".
                 set(s => ({
@@ -271,6 +287,39 @@ export const useFileStore = create<FileStoreState>()(
                 console.log("[Store] rejectSuggestions")
                 set({ suggestedChanges: null })
             },
+
+            addFile: (path, code) => {
+                const normalized = normalizePath(path)
+                get().updateFile(normalized, code)
+                const seq = ++syncSeq
+                set({ pendingSandpackSync: { seq, files: { [normalized]: code } }, activeFile: normalized })
+            },
+
+            removeFile: (path) => {
+                const normalized = normalizePath(path)
+                const id = get().currentInstanceId
+                if (!id || !get().instances[id]) return
+
+                const updatedFiles = { ...get().projectFiles }
+                delete updatedFiles[normalized]
+
+                const updatedInstances = { ...get().instances }
+                const currentInst = updatedInstances[id]
+                if (currentInst) {
+                    updatedInstances[id] = { ...currentInst, files: updatedFiles, updatedAt: Date.now() }
+                }
+
+                set({
+                    projectFiles: updatedFiles,
+                    instances: updatedInstances,
+                    // If we deleted the active file, switch to another one
+                    activeFile: get().activeFile === normalized ? Object.keys(updatedFiles)[0] ?? "" : get().activeFile
+                })
+                // Note: Sandpack doesn't easily support deleting files via updateFile, 
+                // but removing it from projectFiles will trigger a reload via the Provider fallback.
+            },
+
+            forceRefresh: () => set(s => ({ refreshKey: s.refreshKey + 1 })),
         }),
         {
             name: "vfs-store-v9",
@@ -278,16 +327,47 @@ export const useFileStore = create<FileStoreState>()(
             storage: createJSONStorage(() => localStorage),
             onRehydrateStorage: () => (state) => {
                 if (state) {
-                    // Never restore stale sync signals or unsaved buffers across sessions
+                    // 1) Clear transient signals
                     state.pendingSandpackSync = null
                     state.editorBuffers = {}
-                    console.log("[Store] Rehydrated — instance:", state.currentInstanceId)
-                    console.log("[Store] Files:", Object.keys(state.projectFiles))
+
+                    // 2) CLEANUP LEGACY DATA: ensure no leading slashes in keys
+                    const cleanedFiles: VirtualFileSystem = {}
+                    Object.entries(state.projectFiles || {}).forEach(([p, f]) => {
+                        const cleanPath = p.startsWith("/") ? p.slice(1) : p
+                        cleanedFiles[cleanPath] = f
+                    })
+                    state.projectFiles = cleanedFiles
+
+                    if (state.activeFile?.startsWith("/")) {
+                        state.activeFile = state.activeFile.slice(1)
+                    }
+
+                    // Also clean instance files
+                    if (state.instances) {
+                        Object.keys(state.instances).forEach(id => {
+                            const inst = state.instances?.[id]
+                            if (inst && inst.files) {
+                                const cleanedInstFiles: VirtualFileSystem = {}
+                                Object.entries(inst.files).forEach(([p, f]) => {
+                                    cleanedInstFiles[p.startsWith("/") ? p.slice(1) : p] = f
+                                })
+                                inst.files = cleanedInstFiles
+                            }
+                        })
+                    }
+
+                    console.log("[Store] Rehydrated & Cleaned — instance:", state.currentInstanceId)
                 }
             },
         }
     )
 )
+
+export function normalizePath(path: string): string {
+    if (!path) return ""
+    return path.startsWith("/") ? path.slice(1) : path
+}
 
 export function inferLanguage(filePath: string): string {
     const ext = filePath.split(".").pop()?.toLowerCase() ?? ""
@@ -297,7 +377,7 @@ export function inferLanguage(filePath: string): string {
 export function normalizeBackendFiles(raw: Record<string, any>): VirtualFileSystem {
     return Object.fromEntries(
         Object.entries(raw).map(([path, content]) => [
-            path,
+            normalizePath(path),
             { code: (content && typeof content === "object" && "code" in content) ? String(content.code) : String(content), language: inferLanguage(path) }
         ])
     )

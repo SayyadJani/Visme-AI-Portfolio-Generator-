@@ -17,7 +17,8 @@ interface LogEntry {
 
 export default function SandpackDiagnostics() {
     const { sandpack } = useSandpack()
-    const { pendingSandpackSync, projectFiles } = useFileStore()
+    const pendingSandpackSync = useFileStore(s => s.pendingSandpackSync)
+    const projectFiles = useFileStore(s => s.projectFiles)
     const [logs, setLogs] = useState<LogEntry[]>([])
     const [open, setOpen] = useState(false)
     const prevStatus = useRef(sandpack.status)

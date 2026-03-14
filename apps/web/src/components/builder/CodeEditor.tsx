@@ -8,14 +8,21 @@ import SuggestionOverlay from "./SuggestionOverlay"
 import { cn } from "@/lib/utils"
 
 export default function CodeEditor() {
-    const { activeFile, projectFiles, editorBuffers, setEditorBuffer, saveFile, suggestedChanges } = useFileStore()
+    const activeFile = useFileStore(s => s.activeFile)
+    const projectFiles = useFileStore(s => s.projectFiles)
+    const editorBuffers = useFileStore(s => s.editorBuffers)
+    const setEditorBuffer = useFileStore(s => s.setEditorBuffer)
+    const saveFile = useFileStore(s => s.saveFile)
+    const suggestedChanges = useFileStore(s => s.suggestedChanges)
+
     const editorRef = useRef<any>(null)
     const [viewMode, setViewMode] = useState<"edit" | "diff">("edit")
+    const lastTypedValue = useRef<string | null>(null)
 
     const currentValue = editorBuffers[activeFile] ?? projectFiles[activeFile]?.code ?? ""
     const originalValue = projectFiles[activeFile]?.code ?? ""
-    const hasUnsaved   = editorBuffers[activeFile] !== undefined
-    
+    const hasUnsaved = editorBuffers[activeFile] !== undefined
+
     const hasSuggestionForThisFile = suggestedChanges?.filePath === activeFile
     const proposedValue = suggestedChanges?.proposedCode ?? ""
 
@@ -24,7 +31,8 @@ export default function CodeEditor() {
         setViewMode("edit")
     }, [activeFile])
 
-    // When AI applies changes to the currently-open file, push into Monaco.
+    // Push external changes (e.g. from backend or AI sync) into the editor
+    // but ONLY if the editor doesn't have local dirty changes.
     useEffect(() => {
         if (!editorRef.current || !activeFile) return
         if (editorBuffers[activeFile] !== undefined) return
@@ -32,12 +40,9 @@ export default function CodeEditor() {
         const savedContent = projectFiles[activeFile]?.code ?? ""
         const model = editorRef.current.getModel?.()
         if (model && model.getValue() !== savedContent) {
-            console.log(`[Editor] Pushing external change to Monaco for "${activeFile}"`)
-            const pos = editorRef.current.getPosition?.()
-            model.setValue(savedContent)
-            if (pos) editorRef.current.setPosition?.(pos)
+            editorRef.current.setValue(savedContent)
         }
-    }, [activeFile, projectFiles, editorBuffers])
+    }, [activeFile, projectFiles]) // Don't depend on editorBuffers here!
 
     // Global Ctrl+S
     useEffect(() => {
@@ -55,14 +60,23 @@ export default function CodeEditor() {
     }, [])
 
     const handleChange = useCallback((val: string | undefined) => {
-        if (val !== undefined && viewMode === "edit") setEditorBuffer(activeFile, val)
+        if (val === undefined || viewMode !== "edit") return
+        lastTypedValue.current = val
+        
+        // Use a small timeout to avoid hammering the store
+        const timeoutId = setTimeout(() => {
+            if (lastTypedValue.current === val) {
+                setEditorBuffer(activeFile, val)
+            }
+        }, 150)
+        return () => clearTimeout(timeoutId)
     }, [activeFile, setEditorBuffer, viewMode])
 
     const handleMount = useCallback((editor: any) => {
         editorRef.current = editor
     }, [])
 
-    const breadcrumb = activeFile || "No file"
+    const breadcrumb = activeFile ? `/${activeFile}` : "No file"
 
     return (
         <div className="h-full flex flex-col bg-[#0b0b0e] relative overflow-hidden">
@@ -80,8 +94,8 @@ export default function CodeEditor() {
                             onClick={() => setViewMode(viewMode === "diff" ? "edit" : "diff")}
                             className={cn(
                                 "flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold uppercase transition-all border",
-                                viewMode === "diff" 
-                                    ? "bg-indigo-500 text-white border-indigo-400" 
+                                viewMode === "diff"
+                                    ? "bg-indigo-500 text-white border-indigo-400"
                                     : "bg-transparent text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/10"
                             )}
                         >
@@ -170,7 +184,7 @@ export default function CodeEditor() {
                         <span className="text-xs uppercase tracking-widest opacity-50">Select a file from Explorer</span>
                     </div>
                 )}
-                
+
                 {/* Local Suggestion Interaction — pinned specifically to editor pane */}
                 <div className="absolute top-0 left-0 w-full flex justify-center pointer-events-none">
                     <div className="w-full max-w-[800px] pointer-events-auto">

@@ -1,32 +1,33 @@
 "use client"
 
+import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ChevronRight, UploadCloud, Code2, Layout, Sparkles, Star } from "lucide-react"
 
-export const Hero = () => {
+export const Hero = memo(() => {
     return (
-        <section className="relative pt-40 md:pt-48 pb-24 px-6">
+        <section className="relative pt-40 md:pt-48 pb-24 px-6 overflow-hidden">
             <div className="max-w-7xl mx-auto flex flex-col items-center text-center relative z-10">
                 {/* Animated Badge */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
+                    transition={{ duration: 0.6 }}
                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 backdrop-blur-md text-[10px] md:text-xs font-bold text-primary mb-8"
                 >
                     <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                     </span>
                     AI-POWERED PORTFOLIO ENGINE
                 </motion.div>
 
-                {/* Significantly Scaled-down Font Sizes */}
                 <motion.h1
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
+                    transition={{ duration: 0.8, delay: 0.1 }}
+                    style={{ willChange: "transform, opacity" }}
                     className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1] max-w-4xl mb-8 text-foreground"
                 >
                     Generate a <span className="text-primary">Professional</span> <br />
@@ -36,7 +37,7 @@ export const Hero = () => {
                 <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 1, delay: 0.5 }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
                     className="max-w-2xl text-base md:text-lg text-muted-foreground font-medium leading-relaxed mb-12"
                 >
                     Skip the coding. Upload your PDF and get a
@@ -45,7 +46,7 @@ export const Hero = () => {
 
                 {/* Action CTAs */}
                 <div className="flex flex-col sm:flex-row items-center gap-4 mb-16">
-                    <Button className="px-10 py-6 bg-primary text-white text-base font-bold rounded-xl flex items-center gap-2 shadow-lg transition-all hover:scale-105 h-auto">
+                    <Button className="px-10 py-6 bg-primary text-white text-base font-bold rounded-xl flex items-center gap-2 shadow-lg transition-all hover:scale-105 h-auto active:scale-95">
                         Generate Now <ChevronRight className="w-4 h-4" />
                     </Button>
                     <Button variant="outline" className="px-10 py-6 border-border bg-background/50 text-base font-bold rounded-xl hover:bg-muted transition-all active:scale-95 h-auto">
@@ -55,18 +56,19 @@ export const Hero = () => {
 
                 {/* Social Proof */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.8 }}
+                    transition={{ duration: 0.6, delay: 0.6 }}
                     className="flex flex-col items-center gap-3 mb-24"
                 >
                     <div className="flex -space-x-3 overflow-hidden">
                         {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="inline-block h-8 w-8 rounded-full border-2 border-background bg-muted shadow-md">
+                            <div key={i} className="inline-block h-8 w-8 rounded-full border-2 border-background bg-muted shadow-md overflow-hidden">
                                 <img
-                                    src={`https://i.pravatar.cc/150?u=${i + 10}`}
+                                    src={`https://i.pravatar.cc/150?u=${i + 15}`}
                                     alt="User"
-                                    className="h-full w-full rounded-full object-cover"
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
                                 />
                             </div>
                         ))}
@@ -80,11 +82,12 @@ export const Hero = () => {
                     </p>
                 </motion.div>
 
-                {/* Mockup Preview - Scaled for better fit */}
+                {/* Mockup Preview */}
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 1.2, delay: 0.3 }}
+                    transition={{ duration: 1, delay: 0.2 }}
+                    style={{ willChange: "transform, opacity" }}
                     className="w-full max-w-4xl mx-auto"
                 >
                     <div className="clay-card p-3 bg-background/20 border-border shadow-xl overflow-hidden group">
@@ -129,4 +132,6 @@ export const Hero = () => {
             </div>
         </section>
     )
-}
+})
+
+Hero.displayName = "Hero"

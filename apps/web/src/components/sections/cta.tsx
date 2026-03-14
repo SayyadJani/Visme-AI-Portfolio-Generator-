@@ -1,17 +1,19 @@
 "use client"
 
+import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ShieldCheck, Globe, Search } from "lucide-react"
 
-export const CTA = () => {
+export const CTA = memo(() => {
     return (
         <section className="py-32 px-6 relative overflow-hidden bg-transparent">
             <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 0.6 }}
                 viewport={{ once: true }}
+                style={{ willChange: "transform, opacity" }}
                 className="max-w-4xl mx-auto text-center space-y-10 relative z-10"
             >
                 <h2 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none text-foreground">
@@ -29,19 +31,19 @@ export const CTA = () => {
 
                     <div className="flex flex-wrap items-center justify-center gap-10 text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em]">
                         <motion.span
-                            whileHover={{ scale: 1.1, color: "var(--foreground)" }}
+                            whileHover={{ scale: 1.05, color: "var(--foreground)" }}
                             className="flex items-center gap-2 transition-colors"
                         >
                             <ShieldCheck className="w-4 h-4 text-primary" /> SSL Included
                         </motion.span>
                         <motion.span
-                            whileHover={{ scale: 1.1, color: "var(--foreground)" }}
+                            whileHover={{ scale: 1.05, color: "var(--foreground)" }}
                             className="flex items-center gap-2 transition-colors"
                         >
                             <Globe className="w-4 h-4 text-primary" /> Custom Domain
                         </motion.span>
                         <motion.span
-                            whileHover={{ scale: 1.1, color: "var(--foreground)" }}
+                            whileHover={{ scale: 1.05, color: "var(--foreground)" }}
                             className="flex items-center gap-2 transition-colors"
                         >
                             <Search className="w-4 h-4 text-primary" /> SEO Optimized
@@ -51,4 +53,6 @@ export const CTA = () => {
             </motion.div>
         </section>
     )
-}
+})
+
+CTA.displayName = "CTA"

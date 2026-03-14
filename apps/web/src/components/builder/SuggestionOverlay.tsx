@@ -7,13 +7,11 @@ import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 export default function SuggestionOverlay() {
-    const { 
-        suggestedChanges, 
-        acceptSuggestions, 
-        rejectSuggestions,
-        activeFile,
-        setActiveFile
-    } = useFileStore()
+    const suggestedChanges = useFileStore(s => s.suggestedChanges)
+    const acceptSuggestions = useFileStore(s => s.acceptSuggestions)
+    const rejectSuggestions = useFileStore(s => s.rejectSuggestions)
+    const activeFile = useFileStore(s => s.activeFile)
+    const setActiveFile = useFileStore(s => s.setActiveFile)
 
     if (!suggestedChanges) return null
 

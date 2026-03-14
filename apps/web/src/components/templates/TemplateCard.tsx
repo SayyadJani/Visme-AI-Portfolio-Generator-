@@ -25,7 +25,8 @@ export const TemplateCard = ({
 }: TemplateCardProps) => {
     const router = useRouter()
     const setSelectedTemplate = useTemplateStore((state) => state.setSelectedTemplate)
-    const { createInstance, setCurrentInstance } = useFileStore()
+    const createInstance = useFileStore(s => s.createInstance)
+    const setCurrentInstance = useFileStore(s => s.setCurrentInstance)
 
     const handleUseTemplate = () => {
         // STEP 1 — User Selects Template

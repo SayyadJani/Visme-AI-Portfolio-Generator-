@@ -1,5 +1,6 @@
 "use client"
 
+import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { MoreVertical, Layers, Clock, Eye, Edit3, Settings, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,7 @@ interface PortfolioCardProps {
     delay?: number
 }
 
-export const PortfolioCard = ({
+export const PortfolioCard = memo(({
     title,
     template,
     status,
@@ -100,4 +101,4 @@ export const PortfolioCard = ({
             </div>
         </motion.div>
     )
-}
+})

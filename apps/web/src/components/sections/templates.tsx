@@ -1,10 +1,11 @@
 "use client"
 
+import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 import { templates } from "@/data/templates"
 
-export const Templates = () => {
+export const Templates = memo(() => {
     const featuredTemplates = templates.slice(0, 3)
     return (
         <section className="py-20 px-6 relative overflow-hidden bg-transparent">
@@ -46,9 +47,10 @@ export const Templates = () => {
                         key={template.id}
                         initial={{ opacity: 0, y: 10 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
+                        viewport={{ once: true, margin: "-50px" }}
                         transition={{ delay: i * 0.1 }}
                         whileHover={{ scale: 0.99 }}
+                        style={{ willChange: "transform, opacity" }}
                         className="group cursor-pointer"
                     >
                         <div className={`aspect-[4/3] rounded-2xl bg-muted/20 mb-4 border border-border overflow-hidden transition-all group-hover:border-primary/30 group-hover:shadow-md relative`}>
@@ -56,6 +58,7 @@ export const Templates = () => {
                                 src={template.imageUrl}
                                 alt={template.title}
                                 className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
+                                loading="lazy"
                             />
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/20 to-transparent h-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
@@ -77,4 +80,6 @@ export const Templates = () => {
             </div>
         </section>
     )
-}
+})
+
+Templates.displayName = "Templates"

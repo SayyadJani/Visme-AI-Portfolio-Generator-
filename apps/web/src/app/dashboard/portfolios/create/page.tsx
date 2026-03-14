@@ -18,13 +18,11 @@ import { useFileStore } from "@/components/builder/fileStore"
 export default function CreatePortfolioPage() {
     const router = useRouter()
     const { selectedTemplate, setSelectedTemplate } = useTemplateStore()
-    const { 
-        parsedResume, 
-        setResumeFile: storeSetResumeFile, 
-        performMockParsing, 
-        generateSuggestions,
-        createInstance
-    } = useFileStore()
+    const parsedResume = useFileStore(s => s.parsedResume)
+    const storeSetResumeFile = useFileStore(s => s.setResumeFile)
+    const performMockParsing = useFileStore(s => s.performMockParsing)
+    const generateSuggestions = useFileStore(s => s.generateSuggestions)
+    const createInstance = useFileStore(s => s.createInstance)
 
     const [currentStep, setCurrentStep] = useState(() => selectedTemplate ? 2 : 1)
     const [isProcessing, setIsProcessing] = useState(false)

@@ -1,5 +1,6 @@
 "use client"
 
+import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react"
 
@@ -12,7 +13,7 @@ interface StatsCardProps {
     delay?: number
 }
 
-export const StatsCard = ({ title, value, icon: Icon, trend, trendType = "up", delay = 0 }: StatsCardProps) => {
+export const StatsCard = memo(({ title, value, icon: Icon, trend, trendType = "up", delay = 0 }: StatsCardProps) => {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -46,4 +47,4 @@ export const StatsCard = ({ title, value, icon: Icon, trend, trendType = "up", d
             </div>
         </motion.div>
     )
-}
+})

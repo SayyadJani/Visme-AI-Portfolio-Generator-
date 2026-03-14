@@ -1,11 +1,12 @@
 "use client"
 
+import React, { memo } from "react"
 import { Search, Bell, Command, Settings, Sparkles } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Link from "next/link"
 
-export const DashboardNavbar = () => {
+export const DashboardNavbar = memo(() => {
     return (
         <nav className="h-20 border-b border-border bg-background/80 backdrop-blur-xl absolute top-0 left-0 right-0 px-8 flex items-center justify-between z-[60]">
             {/* Brand Logo */}
@@ -54,4 +55,4 @@ export const DashboardNavbar = () => {
             </div>
         </nav>
     )
-}
+})

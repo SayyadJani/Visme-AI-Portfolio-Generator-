@@ -16,7 +16,7 @@ export const developerTemplate: Template = {
     "react-dom": "^18.2.0"
   },
   files: {
-    "public/index.html": {
+    "index.html": {
       code: `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -40,6 +40,8 @@ const rootElement = document.getElementById("root");
 if (rootElement) {
   const root = createRoot(rootElement);
   root.render(<App />);
+} else {
+  console.error("Root element not found");
 }`,
       language: "javascript"
     },
@@ -52,7 +54,7 @@ export default function App() {
   return (
     <div className="portfolio-app">
       <Hero />
-      <main className="main-content">
+      <main>
         <Projects />
       </main>
     </div>
@@ -67,8 +69,8 @@ import { portfolioData } from "../data/portfolioData";
 export const Hero = () => {
   return (
     <header className="hero">
-      <h1>{portfolioData.name}</h1>
-      <p className="role">{portfolioData.role}</p>
+      <h1>{portfolioData.name || "Default Name"}</h1>
+      <p className="role">{portfolioData.role || "Developer"}</p>
       <div className="skills">
         {(portfolioData.skills || []).map((skill) => (
           <span key={skill} className="skill-badge">{skill}</span>
@@ -85,8 +87,8 @@ import { portfolioData } from "../data/portfolioData";
 
 export const Projects = () => {
   return (
-    <section className="projects-section">
-      <h2>Recent Work</h2>
+    <section className="projects">
+      <h2 style={{ padding: '0 2rem' }}>Featured Projects</h2>
       <div className="projects-grid">
         {(portfolioData.projects || []).map((project, index) => (
           <div key={index} className="project-card">
@@ -102,23 +104,26 @@ export const Projects = () => {
     },
     "src/data/portfolioData.js": {
       code: `export const portfolioData = {
-  name: "Alex Rivera",
-  role: "Senior Full Stack Engineer",
-  skills: ["React", "Node.js", "TypeScript", "Python"],
+  name: "Jani Pasha",
+  role: "Senior Full Stack Dev",
+  skills: ["React", "TypeScript", "Node.js", "Tailwind"],
   projects: [
-    { title: "Project 1", description: "Description 1" },
-    { title: "Project 2", description: "Description 2" }
+    { title: "Automation Engine", description: "Prototyping next-gen AI tools." }
   ]
 };`,
       language: "javascript"
     },
     "src/styles.css": {
-      code: `body { margin: 0; font-family: sans-serif; background: #0d1117; color: #c9d1d9; }
-.hero { padding: 4rem 2rem; text-align: center; }
-.hero h1 { font-size: 3rem; margin-bottom: 1rem; color: #58a6ff; }
-.skill-badge { background: #21262d; padding: 0.2rem 0.6rem; border-radius: 12px; margin: 0.3rem; display: inline-block; font-size: 0.8rem; border: 1px border #30363d; }
-.projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; padding: 2rem; }
-.project-card { background: #161b22; padding: 1.5rem; border-radius: 8px; border: 1px solid #30363d; }`,
+      code: `body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0b0b0e; color: #fff; }
+.hero { padding: 5rem 2rem; text-align: center; background: linear-gradient(to bottom, #111115, #0b0b0e); border-bottom: 1px solid #1c1c22; }
+.hero h1 { font-size: 3.5rem; margin: 0; background: linear-gradient(to right, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
+.role { font-size: 1.25rem; color: #94a3b8; margin-top: 1rem; font-weight: 500; }
+.skill-badge { background: #1a1a24; padding: 0.4rem 1rem; border-radius: 99px; margin: 0.3rem; display: inline-block; font-size: 0.75rem; border: 1px solid #2a2a35; color: #818cf8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; padding: 2rem; }
+.project-card { background: #111115; padding: 2rem; border-radius: 12px; border: 1px solid #1c1c22; transition: all 0.2s; }
+.project-card:hover { border-color: #6366f1; transform: translateY(-4px); background: #16161f; }
+.project-card h3 { color: #6366f1; margin-top: 0; }
+.project-card p { color: #94a3b8; font-size: 0.9rem; line-height: 1.6; }`,
       language: "css"
     }
   }

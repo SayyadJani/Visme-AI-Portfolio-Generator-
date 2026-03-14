@@ -13,7 +13,7 @@ import {
     Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
+import React, { useState, memo } from "react"
 import { userProfile } from "@/data/userProfile"
 
 const navItems = [
@@ -24,7 +24,7 @@ const navItems = [
     { icon: User, label: "Profile", href: "/dashboard/profile" },
 ]
 
-export const DashboardSidebar = () => {
+export const DashboardSidebar = memo(() => {
     const pathname = usePathname()
     const [isHovered, setIsHovered] = useState(false)
 
@@ -103,4 +103,4 @@ export const DashboardSidebar = () => {
             </div>
         </aside>
     )
-}
+})
