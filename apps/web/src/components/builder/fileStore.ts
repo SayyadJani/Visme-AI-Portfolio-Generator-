@@ -30,8 +30,12 @@ interface FileStoreState {
     suggestedChanges: { filePath: string; originalCode: string; proposedCode: string } | null
     previewUrl: string | null
     isPreviewLoading: boolean
+    isSaving: boolean
+    previewRefreshKey: number
     loadProjects: () => Promise<void>
     startPreview: () => Promise<void>
+    stopPreview: () => Promise<void>
+    refreshPreview: () => void
     setCurrentInstance: (instanceId: string) => void | Promise<void>
     updateFile: (path: string, code: string) => void
     setActiveFile: (path: string) => void
@@ -57,8 +61,7 @@ interface FileStoreState {
 let syncSeq = 0
 
 export const useFileStore = create<FileStoreState>()(
-    persist(
-        (set, get) => ({
+    (set, get) => ({
             projects: [],
             instances: {},
             currentInstanceId: null,
@@ -73,6 +76,8 @@ export const useFileStore = create<FileStoreState>()(
             suggestedChanges: null,
             previewUrl: null,
             isPreviewLoading: false,
+            isSaving: false,
+            previewRefreshKey: 0,
 
             // ─────────────────────────────────────────────────────────────────
             setResumeFile: (file) => set({ resumeFile: file }),
@@ -163,6 +168,22 @@ export const useFileStore = create<FileStoreState>()(
                 }
             },
 
+            stopPreview: async () => {
+                const { currentInstanceId } = get()
+                if (!currentInstanceId) return
+
+                try {
+                    await previewService.stopPreview(Number(currentInstanceId))
+                    set({ previewUrl: null, isPreviewLoading: false })
+                } catch (error) {
+                    console.error("STOP_PREVIEW_ERROR:", error)
+                }
+            },
+
+            refreshPreview: () => {
+                set(s => ({ previewRefreshKey: s.previewRefreshKey + 1 }))
+            },
+
             // ─── Real Backend Integration ─────────────────────────────────────
             createProject: async (templateId, name) => {
                 try {
@@ -198,9 +219,9 @@ export const useFileStore = create<FileStoreState>()(
             },
 
             setCurrentInstance: async (id: string) => {
-                const inst = get().instances[id]
-                if (!inst) return
-
+                const currentInstances = get().instances
+                const inst = currentInstances[id]
+                
                 console.log("[Store] setCurrentInstance →", id)
 
                 // Set the basic state first
@@ -211,15 +232,34 @@ export const useFileStore = create<FileStoreState>()(
                     pendingSandpackSync: null
                 })
 
-                // If instance record is missing (e.g. after refresh) or files are empty
-                if (!inst || Object.keys(inst.files).length === 0) {
+                // If instance record is missing or files are empty, fetch from backend
+                if (!inst || !inst.files || Object.keys(inst.files).length === 0) {
                     console.log("[Store] Project files missing or empty, fetching from backend...")
+                    
+                    // Create placeholder if missing to avoid downstream null checks
+                    if (!inst) {
+                        set(s => ({
+                            instances: {
+                                ...s.instances,
+                                [id]: { 
+                                    instanceId: id, 
+                                    templateId: "restored", 
+                                    name: "Loading...", 
+                                    files: {},
+                                    createdAt: Date.now(),
+                                    updatedAt: Date.now()
+                                }
+                            }
+                        }))
+                    }
+                    
                     await get().loadAllProjectFiles()
                 } else {
                     // Just set the active file from existing ones
                     const activeFile = inst.files["src/App.js"] ? "src/App.js"
                         : inst.files["src/App.jsx"] ? "src/App.jsx"
-                            : Object.keys(inst.files)[0] || ""
+                            : inst.files["src/App.tsx"] ? "src/App.tsx"
+                                : Object.keys(inst.files)[0] || ""
                     set({ activeFile })
                 }
             },
@@ -244,46 +284,19 @@ export const useFileStore = create<FileStoreState>()(
                 if (!currentInstanceId) return
 
                 try {
-                    const { tree } = await projectService.getFileTree(Number(currentInstanceId))
-
-                    // Flatten tree to get all file paths
-                    const allFiles: string[] = []
-                    const walk = (nodes: FileNode[]) => {
-                        nodes.forEach(node => {
-                            if (node.type === 'file') allFiles.push(node.path)
-                            if (node.children) walk(node.children)
-                        })
-                    }
-                    walk(tree)
-
-                    console.log(`[Store] Found ${allFiles.length} files in tree. Loading contents...`)
-
-                    // Fetch all file contents in parallel
-                    // Note: In a massive project this would be bad, but our templates are small.
-                    const result = await Promise.all(
-                        allFiles.map(async (path) => {
-                            try {
-                                const res = await projectService.getFileContent(Number(currentInstanceId), path)
-                                return { path, content: res.content }
-                            } catch {
-                                return null
-                            }
-                        })
-                    )
-
+                    const { files } = await projectService.getFullVFS(Number(currentInstanceId))
+                    
                     const updatedFiles: VirtualFileSystem = {}
-                    result.forEach((item) => {
-                        if (item) {
-                            updatedFiles[normalizePath(item.path)] = {
-                                code: item.content,
-                                language: inferLanguage(item.path)
-                            }
+                    Object.entries(files).forEach(([p, content]) => {
+                        updatedFiles[normalizePath(p)] = {
+                            code: content,
+                            language: inferLanguage(p)
                         }
                     })
 
                     const activeFile = updatedFiles["src/App.js"] ? "src/App.js"
                         : updatedFiles["src/App.jsx"] ? "src/App.jsx"
-                            : updatedFiles["src/index.js"] ? "src/index.js"
+                            : updatedFiles["src/App.tsx"] ? "src/App.tsx"
                                 : Object.keys(updatedFiles)[0] || ""
 
                     set(s => {
@@ -294,16 +307,26 @@ export const useFileStore = create<FileStoreState>()(
                                 files: updatedFiles,
                                 updatedAt: Date.now()
                             };
+                        } else {
+                            // Safe fallback in case instance record was missing
+                            instances[currentInstanceId] = {
+                                instanceId: currentInstanceId,
+                                templateId: "restored",
+                                name: "Restored Project",
+                                files: updatedFiles,
+                                createdAt: Date.now(),
+                                updatedAt: Date.now()
+                            }
                         }
                         return {
                             projectFiles: updatedFiles,
-                            activeFile,
+                            activeFile: s.activeFile || activeFile,
                             refreshKey: s.refreshKey + 1,
                             instances
                         };
                     })
                 } catch (err) {
-                    console.error("[Store] Failed to load project tree/files:", err)
+                    console.error("[Store] Failed to load project from Redis/Disk:", err)
                 }
             },
 
@@ -351,7 +374,7 @@ export const useFileStore = create<FileStoreState>()(
                 }
 
                 const normalizedPath = normalizePath(path)
-
+                set({ isSaving: true })
                 try {
                     // 1. Actually Save to Backend Disk
                     await projectService.saveFileContent(Number(currentInstanceId), normalizedPath, code)
@@ -368,9 +391,13 @@ export const useFileStore = create<FileStoreState>()(
                         delete next[path]
                         return { editorBuffers: next } // No longer using Sandpack sync object
                     })
+                    // 3. Trigger preview refresh
+                    get().refreshPreview()
                 } catch (err) {
                     console.error(`[Store] Failed to save file ${normalizedPath} to backend:`, err)
                     // TODO: Could show a toast notification here in the future
+                } finally {
+                    set({ isSaving: false })
                 }
             },
 
@@ -384,6 +411,7 @@ export const useFileStore = create<FileStoreState>()(
                     return
                 }
 
+                set({ isSaving: true })
                 try {
                     // Start saving all dirty files to backend in parallel
                     await Promise.all(
@@ -399,8 +427,13 @@ export const useFileStore = create<FileStoreState>()(
                     
                     // Clear all dirty buffers
                     set({ editorBuffers: {} })
+
+                    // Trigger preview refresh
+                    get().refreshPreview()
                 } catch (err) {
                     console.error("[Store] saveAllFiles → ❌ Failed:", err)
+                } finally {
+                    set({ isSaving: false })
                 }
             },
 
@@ -477,60 +510,11 @@ export const useFileStore = create<FileStoreState>()(
             forceRefresh: async () => {
                 set(s => ({ refreshKey: s.refreshKey + 1 }))
                 await get().loadAllProjectFiles()
+                get().refreshPreview()                // byteLength is roughly content length
+                // Object.keys(updatedFiles).length is file count
             },
-        }),
-        {
-            name: "vfs-store-v10",
-            version: 10,
-            storage: createJSONStorage(() => localStorage),
-            partialize: (state) => ({
-                currentInstanceId: state.currentInstanceId,
-                activeFile: state.activeFile,
-                resumeText: state.resumeText,
-                parsedResume: state.parsedResume,
-                projects: state.projects, // Metadata is small and safe to persist
-                // We EXCLUDE 'instances' and 'projectFiles' from localStorage!
-                // These contain full source code of every file, which easily exceeds the 5MB limit.
-                // We rely on loadAllProjectFiles() to re-fetch from backend upon reload.
-            }),
-            onRehydrateStorage: () => (state) => {
-                if (state) {
-                    // 1) Clear transient signals
-                    state.pendingSandpackSync = null
-                    state.editorBuffers = {}
-
-                    // 2) CLEANUP LEGACY DATA: ensure no leading slashes in keys
-                    const cleanedFiles: VirtualFileSystem = {}
-                    Object.entries(state.projectFiles || {}).forEach(([p, f]) => {
-                        const cleanPath = p.startsWith("/") ? p.slice(1) : p
-                        cleanedFiles[cleanPath] = f
-                    })
-                    state.projectFiles = cleanedFiles
-
-                    if (state.activeFile?.startsWith("/")) {
-                        state.activeFile = state.activeFile.slice(1)
-                    }
-
-                    // Also clean instance files
-                    if (state.instances) {
-                        Object.keys(state.instances).forEach(id => {
-                            const inst = state.instances?.[id]
-                            if (inst && inst.files) {
-                                const cleanedInstFiles: VirtualFileSystem = {}
-                                Object.entries(inst.files).forEach(([p, f]) => {
-                                    cleanedInstFiles[p.startsWith("/") ? p.slice(1) : p] = f
-                                })
-                                inst.files = cleanedInstFiles
-                            }
-                        })
-                    }
-
-                    console.log("[Store] Rehydrated & Cleaned — instance:", state.currentInstanceId)
-                }
-            },
-        }
-    )
-)
+        })
+);
 
 export function normalizePath(path: string): string {
     if (!path) return ""

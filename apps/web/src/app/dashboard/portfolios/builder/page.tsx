@@ -27,7 +27,16 @@ const Builder = dynamic(
 export default function BuilderPage() {
   return (
     <div className="h-screen w-screen bg-[#0b0b0e] overflow-hidden">
-      <Builder />
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <p className="text-sm font-semibold uppercase tracking-widest text-[#00ffcc]">
+            Syncing Session…
+          </p>
+        </div>
+      }>
+        <Builder />
+      </Suspense>
     </div>
   )
 }

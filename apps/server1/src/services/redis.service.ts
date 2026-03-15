@@ -123,5 +123,31 @@ export class RedisService {
       return null;
     }
   }
+
+  // ── Project File Cache ───────────────────────────────────────────────────────
+  // Caches the entire project files structure for fast resume/refresh
+  
+  static async getCachedFiles(projectId: number): Promise<string | null> {
+    try {
+      return await redis.get(`project:${projectId}:vfs`);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  static async setCachedFiles(projectId: number, json: string): Promise<void> {
+    try {
+      // Cache VFS for 1 hour of activity
+      await redis.set(`project:${projectId}:vfs`, json, 'EX', 3600);
+    } catch (error) {
+      logger.warn(`Failed to cache project ${projectId} files in Redis`);
+    }
+  }
+
+  static async invalidateFileCache(projectId: number): Promise<void> {
+    try {
+      await redis.del(`project:${projectId}:vfs`);
+    } catch (error) {}
+  }
 }
 

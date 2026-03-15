@@ -8,10 +8,19 @@ import { useFileStore } from "./fileStore"
 export default function PreviewPanel() {
     const previewUrl = useFileStore(s => s.previewUrl)
     const isPreviewLoading = useFileStore(s => s.isPreviewLoading)
+    const previewRefreshKey = useFileStore(s => s.previewRefreshKey)
     const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop")
     const [isFullscreen, setIsFullscreen] = useState(false)
     const panelRef = useRef<HTMLDivElement>(null)
     const iframeRef = useRef<HTMLIFrameElement>(null)
+
+    // Automatically Refresh Iframe on Save
+    useEffect(() => {
+        if (previewRefreshKey > 0 && iframeRef.current) {
+            console.log("[PreviewPanel] 🔄 Change detected, refreshing iframe...")
+            iframeRef.current.src = iframeRef.current.src
+        }
+    }, [previewRefreshKey])
 
     const handleRefresh = () => {
         if (iframeRef.current) {

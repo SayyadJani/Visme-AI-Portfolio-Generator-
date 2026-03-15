@@ -9,6 +9,7 @@ import type {
   FileTreeResponse,
   FileContentResponse,
   SaveFileResponse,
+  VfsResponse,
 } from '@repo/types';
 import { RedisService } from './redis.service';
 import { NotFoundError, AppError } from '@repo/shared-utils';
@@ -260,6 +261,53 @@ export async function getFileTree(
   return { projectId, tree };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 3.5 getFullVfsCached()
+// GET /api/projects/:id/full-vfs
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function getFullVfsCached(
+  projectId: number,
+  userId:    number
+): Promise<VfsResponse> {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, userId },
+  });
+  if (!project) throw new NotFoundError('Project');
+
+  // 1. Try Redis cache
+  const cached = await RedisService.getCachedFiles(projectId);
+  if (cached) {
+    logger.info(`Project ${projectId} VFS served from Redis`, undefined, 'project-service');
+    return { projectId, files: JSON.parse(cached) };
+  }
+
+  // 2. Fallback to Disk read
+  const files: Record<string, string> = {};
+  
+  const walk = (dir: string) => {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (SKIP_DIRS.has(entry.name)) continue;
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+         walk(fullPath);
+      } else {
+         const relPath = path.relative(project.diskPath, fullPath).replace(/\\/g, '/');
+         files[relPath] = fs.readFileSync(fullPath, 'utf-8');
+      }
+    }
+  };
+
+  walk(project.diskPath);
+
+  // 3. Save to Redis
+  await RedisService.setCachedFiles(projectId, JSON.stringify(files));
+  logger.info(`Project ${projectId} VFS cached in Redis`, undefined, 'project-service');
+
+  return { projectId, files };
+}
+
 
 // ════════════════════════════════════════════════════════════════════════════════
 // 4. getFileContent()
@@ -329,6 +377,9 @@ export async function saveFileContent(
   RedisService.touchProjectActivity(projectId).catch(() => {});
 
   maybeCreateAutoSnapshot(projectId, project.diskPath).catch(() => {});
+
+  // 4. Invalidate Redis VFS Cache
+  RedisService.invalidateFileCache(projectId).catch(() => {});
 
   return { saved: true, filePath };
 }

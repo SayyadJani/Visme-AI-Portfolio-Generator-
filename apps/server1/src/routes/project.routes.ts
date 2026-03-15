@@ -23,6 +23,9 @@ router.get('/:id/files', ProjectController.getFileTree);
 //    The wildcard captures any depth: src/App.jsx, src/components/Hero.jsx, etc.
 router.get('/:id/files/*', ProjectController.getFile);
 
+// 5.5 Get full VFS (Redis cached) - used for fast reload/persistence
+router.get('/:id/full-vfs', ProjectController.getFullVFS);
+
 // 6. Save file content from Monaco editor
 router.put('/:id/files/*', ProjectController.saveFile);
 

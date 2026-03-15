@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useCallback, useState } from "react"
 import { Editor, DiffEditor } from "@monaco-editor/react"
 import { useFileStore } from "./fileStore"
-import { Save, FileCode2, Split, Wand2, Sparkles } from "lucide-react"
+import { Save, FileCode2, Split, Wand2, Sparkles, Loader2 } from "lucide-react"
 import SuggestionOverlay from "./SuggestionOverlay"
 import { cn } from "@/lib/utils"
 
@@ -13,6 +13,7 @@ export default function CodeEditor() {
     const editorBuffers = useFileStore(s => s.editorBuffers)
     const setEditorBuffer = useFileStore(s => s.setEditorBuffer)
     const saveFile = useFileStore(s => s.saveFile)
+    const isSaving = useFileStore(s => s.isSaving)
     const suggestedChanges = useFileStore(s => s.suggestedChanges)
 
     const editorRef = useRef<any>(null)
@@ -124,16 +125,21 @@ export default function CodeEditor() {
                 <div className="flex items-center gap-2 pr-3">
                     <button
                         onClick={() => saveFile(activeFile)}
-                        disabled={!hasUnsaved}
+                        disabled={!hasUnsaved || isSaving}
                         className={cn(
                             "flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest transition-all",
                             hasUnsaved
                                 ? "bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 cursor-pointer shadow-lg shadow-indigo-600/10"
-                                : "text-muted-foreground/30 cursor-not-allowed"
+                                : "text-muted-foreground/30 cursor-not-allowed",
+                            isSaving && "opacity-70"
                         )}
                     >
-                        <Save className="w-3 h-3" />
-                        {hasUnsaved ? "Save All" : "Saved"}
+                        {isSaving ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                            <Save className="w-3 h-3" />
+                        )}
+                        {isSaving ? "Saving..." : hasUnsaved ? "Save All" : "Saved"}
                     </button>
                 </div>
             </div>

@@ -3,9 +3,9 @@
 import React, { useEffect } from "react"
 import { useFileStore } from "./fileStore"
 import BuilderLayout from "./builderLayout"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
-    ArrowLeft, Globe, Download, Share2, Rocket, Settings, Wifi
+    ArrowLeft, Globe, Download, Share2, Rocket, Settings, Wifi, Loader2
 } from "lucide-react"
 
 function TopNav() {
@@ -101,6 +101,7 @@ function TopNav() {
 function StatusBar() {
     const activeFile = useFileStore(s => s.activeFile)
     const previewUrl = useFileStore(s => s.previewUrl)
+    const isSaving = useFileStore(s => s.isSaving)
 
     const lang = activeFile ? (() => {
         const ext = activeFile.split(".").pop()?.toLowerCase() ?? ""
@@ -122,6 +123,12 @@ function StatusBar() {
                     <div className={`w-1.5 h-1.5 rounded-full ${previewUrl ? "bg-indigo-500 shadow-[0_0_6px_rgba(99,102,241,0.5)]" : "bg-yellow-500 animate-pulse"}`} />
                     <span className="text-muted-foreground">{previewUrl ? "Systems Ready" : "Initializing"}</span>
                 </div>
+                {isSaving && (
+                    <div className="flex items-center gap-2 text-amber-500 animate-pulse">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Saving Changes...</span>
+                    </div>
+                )}
                 <div className="flex items-center gap-1.5">
                     <Wifi className="w-3 h-3" />
                     <span>WebSocket: Connected</span>
@@ -153,17 +160,46 @@ function StatusBar() {
 export default function Builder() {
     const currentInstanceId = useFileStore(s => s.currentInstanceId)
     const instances = useFileStore(s => s.instances)
+    const projectFiles = useFileStore(s => s.projectFiles)
     const startPreview = useFileStore(s => s.startPreview)
+    const stopPreview = useFileStore(s => s.stopPreview)
+    const setCurrentInstance = useFileStore(s => s.setCurrentInstance)
 
     const currentInstance = currentInstanceId ? instances[currentInstanceId] : null
+    const hasFiles = Object.keys(projectFiles).length > 0
+
+    const searchParams = useSearchParams()
+    const urlProjectId = searchParams.get("projectId")
 
     useEffect(() => {
-        if (currentInstanceId) {
+        // 1. URL Sensing: If we have a projectId in URL but it's not the current one, switch.
+        // This handles both initial load and manual URL changes.
+        if (urlProjectId && urlProjectId !== currentInstanceId) {
+            console.log("[Builder] URL sensed project:", urlProjectId)
+            setCurrentInstance(urlProjectId)
+            return
+        }
+
+        if (!currentInstanceId) return
+
+        // 2. Persistence recovery (Redis-backed)
+        // If we have an ID but no data, fetch everything.
+        // This is triggered by setCurrentInstance above, or a refresh.
+        if (!currentInstance || !hasFiles) {
+            console.log("[Builder] 🔄 Persistence recovery: Fetching instance data for", currentInstanceId)
+            setCurrentInstance(currentInstanceId)
+        } else {
+            // Data is here, start the preview
             startPreview()
         }
-    }, [currentInstanceId])
+        
+        // CLEANUP: Stop preview on unmount to free up Server 2 pool
+        return () => {
+            stopPreview()
+        }
+    }, [currentInstanceId, currentInstance, hasFiles, startPreview, stopPreview, setCurrentInstance])
 
-    if (!currentInstanceId || !currentInstance) {
+    if (!currentInstanceId) {
         return (
             <div className="h-screen w-screen bg-[#0b0b0e] flex flex-col items-center justify-center gap-4 text-muted-foreground">
                 <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
@@ -171,6 +207,17 @@ export default function Builder() {
                 </div>
                 <p className="text-sm font-semibold uppercase tracking-widest text-white">No project loaded</p>
                 <p className="text-xs text-muted-foreground/50">Go back and create a portfolio first</p>
+            </div>
+        )
+    }
+
+    // If we have ID but still fetching data
+    if (!currentInstance || !hasFiles) {
+        return (
+            <div className="h-screen w-screen bg-[#0b0b0e] flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-white">Resuming Session...</p>
+                <p className="text-[10px] text-muted-foreground/50 italic">Pulling your latest changes from the cloud</p>
             </div>
         )
     }

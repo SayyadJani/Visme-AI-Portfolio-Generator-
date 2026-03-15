@@ -61,7 +61,7 @@ export default function CreatePortfolioPage() {
 
         try {
             // STEP 3.5: Initialize Instance with Template Files
-            await createProject(
+            const project = await createProject(
                 selectedTemplate.id, 
                 selectedTemplate.name
             )
@@ -69,8 +69,8 @@ export default function CreatePortfolioPage() {
             // STEP 4: Information Matching (Generate Recommendations)
             generateSuggestions()
 
-            // Redirect to builder where user will see Accept/Reject
-            router.push('/dashboard/portfolios/builder')
+            // Redirect to builder with projectId query param
+            router.push(`/dashboard/portfolios/builder?projectId=${project.id}`)
         } catch (error) {
             console.error("Generation failed", error)
             setIsGenerating(false)

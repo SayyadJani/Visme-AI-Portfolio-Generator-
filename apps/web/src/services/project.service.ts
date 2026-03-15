@@ -4,7 +4,8 @@ import {
   ProjectDTO, 
   FileTreeResponse, 
   FileContentResponse, 
-  SaveFileResponse 
+  SaveFileResponse,
+  VfsResponse
 } from '@repo/types';
 import { CreateProjectInput } from '@repo/validation';
 
@@ -46,6 +47,14 @@ export const projectService = {
    */
   getFileContent: async (projectId: number, filePath: string): Promise<FileContentResponse> => {
     const response = await apiClient.get<FileContentResponse>(`/projects/${projectId}/files/${filePath}`);
+    return response.data;
+  },
+
+  /**
+   * Get full VFS (all files) in one request - optimized with Redis
+   */
+  getFullVFS: async (projectId: number): Promise<VfsResponse> => {
+    const response = await apiClient.get<VfsResponse>(`/projects/${projectId}/full-vfs`);
     return response.data;
   },
 

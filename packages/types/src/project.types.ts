@@ -49,6 +49,11 @@ export interface SaveFileResponse {
   filePath: string;
 }
 
+export interface VfsResponse {
+  projectId: number;
+  files: Record<string, string>; // path -> content
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Hybrid Resume Parser Types (matches ParsedData from the parser)
 // ─────────────────────────────────────────────────────────────────────────────

@@ -55,6 +55,7 @@ export function ClientProjectGrid() {
                 {projects.map((item, i) => (
                     <PortfolioCard 
                         key={item.id} 
+                        id={item.id}
                         title={item.name}
                         template={item.templateId}
                         status={item.status === 'READY' ? "Live" : "Draft"}

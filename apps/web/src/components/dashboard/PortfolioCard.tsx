@@ -5,8 +5,10 @@ import { motion } from "framer-motion"
 import { MoreVertical, Layers, Clock, Eye, Edit3, Settings, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import Link from "next/link"
 
 interface PortfolioCardProps {
+    id: number
     title: string
     template: string
     status: "Live" | "Draft"
@@ -17,6 +19,7 @@ interface PortfolioCardProps {
 }
 
 export const PortfolioCard = memo(({
+    id,
     title,
     template,
     status,
@@ -94,10 +97,12 @@ export const PortfolioCard = memo(({
                 </div>
 
                 <div className="flex items-center gap-2.5 mt-auto pt-2">
-                    <Button className="flex-1 bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20 h-11 rounded-xl gap-2.5 font-bold text-xs uppercase tracking-widest transition-all active:scale-95 group/btn">
-                        <Edit3 className="w-3.5 h-3.5 transition-transform group-hover/btn:rotate-12" />
-                        Edit
-                    </Button>
+                    <Link href={`/dashboard/portfolios/builder?projectId=${id}`} className="flex-1">
+                        <Button className="w-full bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20 h-11 rounded-xl gap-2.5 font-bold text-xs uppercase tracking-widest transition-all active:scale-95 group/btn">
+                            <Edit3 className="w-3.5 h-3.5 transition-transform group-hover/btn:rotate-12" />
+                            Edit
+                        </Button>
+                    </Link>
                     <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground hover:bg-muted rounded-xl border border-border/50 active:scale-95">
                         <Settings className="w-4.5 h-4.5" />
                     </Button>

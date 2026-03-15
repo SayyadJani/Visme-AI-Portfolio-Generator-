@@ -5,6 +5,7 @@ import {
   getFileTree,
   getFileContent,
   saveFileContent,
+  getFullVfsCached,
   listUserProjects,
   listSnapshots,
   restoreSnapshot,
@@ -78,6 +79,17 @@ export class ProjectController {
       if (!parsed.success) return next(new ValidationError(parsed.error.flatten().fieldErrors));
 
       const result = await saveFileContent(projectId, Number(req.user!.userId), filePath, parsed.data.content);
+      sendSuccess(res, result);
+    } catch (err) { next(err); }
+  };
+
+  // GET /api/projects/:id/full-vfs
+  static getFullVFS = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      if (isNaN(projectId)) return next(new ValidationError({ id: ['Invalid project ID'] }));
+
+      const result = await getFullVfsCached(projectId, Number(req.user!.userId));
       sendSuccess(res, result);
     } catch (err) { next(err); }
   };
