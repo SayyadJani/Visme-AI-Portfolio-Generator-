@@ -4,6 +4,7 @@ import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 import { templates } from "@/data/templates"
+import Image from "next/image"
 
 export const Templates = memo(() => {
     const featuredTemplates = templates.slice(0, 3)
@@ -54,9 +55,11 @@ export const Templates = memo(() => {
                         className="group cursor-pointer"
                     >
                         <div className={`aspect-[4/3] rounded-2xl bg-muted/20 mb-4 border border-border overflow-hidden transition-all group-hover:border-primary/30 group-hover:shadow-md relative`}>
-                            <img
+                            <Image
                                 src={template.imageUrl}
                                 alt={template.title}
+                                width={400}
+                                height={300}
                                 className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
                                 loading="lazy"
                             />

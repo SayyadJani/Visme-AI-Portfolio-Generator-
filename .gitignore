@@ -44,3 +44,4 @@ coverage
 .DS_Store
 *.pem
 Thumbs.db
+data/

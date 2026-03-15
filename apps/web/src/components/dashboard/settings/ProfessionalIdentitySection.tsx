@@ -2,7 +2,7 @@
 
 import { Briefcase, MapPin, AlignLeft } from "lucide-react"
 import { SettingsSection } from "./SettingsSection"
-import { userProfile } from "@/data/userProfile"
+import { userProfile as staticProfile } from "@/data/userProfile"
 
 export const ProfessionalIdentitySection = () => {
     return (
@@ -19,7 +19,7 @@ export const ProfessionalIdentitySection = () => {
                             <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                             <input
                                 type="text"
-                                defaultValue={userProfile.title}
+                                defaultValue={staticProfile.title}
                                 className="w-full bg-background border border-border rounded-2xl pl-12 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                             />
                         </div>
@@ -30,7 +30,7 @@ export const ProfessionalIdentitySection = () => {
                             <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                             <input
                                 type="text"
-                                defaultValue={userProfile.location}
+                                defaultValue={staticProfile.location}
                                 className="w-full bg-background border border-border rounded-2xl pl-12 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                             />
                         </div>
@@ -43,11 +43,11 @@ export const ProfessionalIdentitySection = () => {
                         <AlignLeft className="absolute left-4 top-4 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <textarea
                             rows={4}
-                            defaultValue={userProfile.bio}
+                            defaultValue={staticProfile.bio}
                             className="w-full bg-background border border-border rounded-2xl pl-12 pr-4 py-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium resize-none"
                         />
                         <div className="absolute bottom-4 right-4 text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">
-                            {userProfile.bio.length} / 500 characters
+                            {staticProfile.bio.length} / 500 characters
                         </div>
                     </div>
                 </div>

@@ -1,34 +1,23 @@
 "use client"
 
-import React, { useEffect, useRef, useCallback, useState } from "react"
-import { SandpackPreview, useSandpack } from "@codesandbox/sandpack-react"
-import { RefreshCw, RotateCcw, Monitor, Tablet, Smartphone, Maximize, Minimize } from "lucide-react"
+import React, { useRef, useState, useEffect } from "react"
+import { RefreshCw, Monitor, Tablet, Smartphone, Maximize, Minimize, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useFileStore } from "./fileStore"
 
 export default function PreviewPanel() {
-    const { sandpack, dispatch } = useSandpack()
-    const prevStatus = useRef(sandpack.status)
+    const previewUrl = useFileStore(s => s.previewUrl)
+    const isPreviewLoading = useFileStore(s => s.isPreviewLoading)
     const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop")
     const [isFullscreen, setIsFullscreen] = useState(false)
     const panelRef = useRef<HTMLDivElement>(null)
+    const iframeRef = useRef<HTMLIFrameElement>(null)
 
-    useEffect(() => {
-        if (sandpack.status !== prevStatus.current) {
-            const color = sandpack.status === "running" ? "color:#22c55e" : "color:#fbbf24"
-            console.log(`%c[Preview] ${prevStatus.current} → ${sandpack.status}`, color)
-            prevStatus.current = sandpack.status
+    const handleRefresh = () => {
+        if (iframeRef.current) {
+            iframeRef.current.src = iframeRef.current.src
         }
-    }, [sandpack.status])
-
-    const handleRefresh = useCallback(() => {
-        console.log("[Preview] Manual refresh")
-        dispatch({ type: "refresh" })
-    }, [dispatch])
-
-    const handleRestart = useCallback(() => {
-        console.log("[Preview] Hard restart")
-        try { sandpack.runSandpack() } catch { dispatch({ type: "refresh" }) }
-    }, [sandpack, dispatch])
+    }
 
     const toggleFullscreen = () => {
         if (!panelRef.current) return
@@ -49,12 +38,9 @@ export default function PreviewPanel() {
         return () => document.removeEventListener("fullscreenchange", handleFsChange)
     }, [])
 
-    const isRunning = sandpack.status === "running"
-    const isError = sandpack.status === "error" as any // Bypass lint because type might be missing it
-
     return (
         <div ref={panelRef} className="h-full flex flex-col bg-[#0b0b0e]">
-            {/* Sub-header matching classic IDE style */}
+            {/* Sub-header */}
             <div className="h-10 shrink-0 flex items-center justify-between px-3 bg-[#111115] border-b border-[#1c1c22]">
                 {/* Viewport Toggles */}
                 <div className="flex items-center gap-0.5 bg-[#16161a] p-1 rounded-md border border-[#1c1c22] shadow-inner">
@@ -94,13 +80,13 @@ export default function PreviewPanel() {
                 <div className="hidden sm:flex items-center h-full">
                     <div className={cn(
                         "flex items-center gap-2 px-3 py-1 rounded bg-[#16161a] border border-[#1c1c22] text-[9px] font-black uppercase tracking-widest",
-                        isRunning ? "text-green-400" : isError ? "text-red-400" : "text-indigo-400"
+                        previewUrl ? "text-green-400" : "text-indigo-400"
                     )}>
                         <div className={cn(
                             "w-1.5 h-1.5 rounded-full",
-                            isRunning ? "bg-green-400 animate-pulse" : isError ? "bg-red-400" : "bg-indigo-400"
+                            previewUrl ? "bg-green-400 animate-pulse" : "bg-indigo-400"
                         )} />
-                        {sandpack.status.toUpperCase()}
+                        {previewUrl ? "LIVE" : isPreviewLoading ? "STARTING..." : "IDLE"}
                     </div>
                 </div>
 
@@ -120,33 +106,46 @@ export default function PreviewPanel() {
                     >
                         {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
                     </button>
-                    <button
-                        onClick={handleRestart}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[9px] font-black uppercase tracking-widest bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-sm shadow-indigo-500/20"
-                    >
-                        <RotateCcw className="w-3 h-3" />
-                        Restart
-                    </button>
                 </div>
             </div>
 
             {/* Preview iframe Container */}
-            <div className="flex-1 bg-[#16161a] overflow-auto flex items-start justify-center p-4 min-h-0">
-                <div 
-                    className="bg-white shadow-2xl transition-all duration-300 ease-in-out h-full"
-                    style={{ 
-                        width: viewport === "desktop" ? "100%" : viewport === "tablet" ? "768px" : "375px",
-                        maxHeight: "100%",
-                        borderRadius: viewport === "desktop" ? "0px" : "12px",
-                        overflow: "hidden"
-                    }}
-                >
-                    <SandpackPreview
-                        style={{ height: "100%" }}
-                        showNavigator={false}
-                        showOpenInCodeSandbox={false}
-                    />
-                </div>
+            <div className="flex-1 bg-[#16161a] overflow-auto flex items-start justify-center p-4 min-h-0 relative">
+                {isPreviewLoading && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#0b0b0e]/80 backdrop-blur-sm">
+                        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Initializing Environment...</p>
+                        <p className="text-[9px] text-muted-foreground/40 mt-1 italic">Server 2 is spinning up your portfolio</p>
+                    </div>
+                )}
+
+                {!previewUrl && !isPreviewLoading && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-[#1c1c22] flex items-center justify-center mb-4">
+                            <Monitor className="w-8 h-8 text-muted-foreground/20" />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Preview Unavailable</p>
+                    </div>
+                )}
+
+                {previewUrl && (
+                    <div 
+                        className="bg-white shadow-2xl transition-all duration-300 ease-in-out h-full"
+                        style={{ 
+                            width: viewport === "desktop" ? "100%" : viewport === "tablet" ? "768px" : "375px",
+                            maxHeight: "100%",
+                            borderRadius: viewport === "desktop" ? "0px" : "12px",
+                            overflow: "hidden"
+                        }}
+                    >
+                        <iframe
+                            ref={iframeRef}
+                            src={previewUrl}
+                            className="w-full h-full border-none"
+                            title="Portfolio Preview"
+                        />
+                    </div>
+                )}
             </div>
         </div>
     )

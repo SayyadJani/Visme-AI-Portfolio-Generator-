@@ -11,10 +11,13 @@ import {
     User,
     LogOut,
     Settings,
+    ShieldCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import React, { useState, memo } from "react"
-import { userProfile } from "@/data/userProfile"
+import { useAuthStore } from "@/stores/authStore"
+import { authService } from "@/services/auth.service"
+import { useRouter } from "next/navigation"
 
 const navItems = [
     { icon: LayoutGrid, label: "Dashboard", href: "/dashboard" },
@@ -22,11 +25,25 @@ const navItems = [
     { icon: Palette, label: "Templates", href: "/dashboard/templates" },
     { icon: History, label: "History", href: "/dashboard/history" },
     { icon: User, label: "Profile", href: "/dashboard/profile" },
+    { icon: ShieldCheck, label: "Admin", href: "/dashboard/admin/templates" },
 ]
 
 export const DashboardSidebar = memo(() => {
     const pathname = usePathname()
+    const router = useRouter()
     const [isHovered, setIsHovered] = useState(false)
+    const { user, clearAuth } = useAuthStore()
+
+    const handleLogout = async () => {
+        try {
+            await authService.logout()
+        } catch (error) {
+            console.error("Logout error:", error)
+        } finally {
+            clearAuth()
+            router.push("/login")
+        }
+    }
 
     return (
         <aside
@@ -77,19 +94,26 @@ export const DashboardSidebar = memo(() => {
 
             <div className="pt-6 border-t border-border mt-auto space-y-4 py-6 px-3 w-full">
                 <button className="flex items-center gap-4 p-2.5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all w-full overflow-hidden">
-                    <div className="w-8 h-8 rounded-xl overflow-hidden border border-border shadow-sm flex-shrink-0">
-                        <img src={userProfile.avatar} alt="User" className="w-full h-full object-cover" />
+                    <div className="w-8 h-8 rounded-xl overflow-hidden border border-border shadow-sm flex-shrink-0 bg-primary/10 flex items-center justify-center">
+                        {user?.name ? (
+                            <span className="text-[10px] font-black">{user.name.split(' ').map(n => n[0]).join('')}</span>
+                        ) : (
+                            <User className="w-4 h-4 text-primary" />
+                        )}
                     </div>
                     <div className={cn(
                         "text-left whitespace-nowrap transition-all duration-300",
                         isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
                     )}>
-                        <p className="text-xs font-bold leading-none">{userProfile.name}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">Pro Member</p>
+                        <p className="text-xs font-bold leading-none">{user?.name || "User"}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Free Member</p>
                     </div>
                 </button>
 
-                <button className="flex items-center gap-4 p-3 rounded-2xl text-destructive/70 hover:text-destructive hover:bg-destructive/5 transition-all w-full group/logout overflow-hidden">
+                <button 
+                    onClick={handleLogout}
+                    className="flex items-center gap-4 p-3 rounded-2xl text-destructive/70 hover:text-destructive hover:bg-destructive/5 transition-all w-full group/logout overflow-hidden"
+                >
                     <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
                         <LogOut className="w-5 h-5" />
                     </div>

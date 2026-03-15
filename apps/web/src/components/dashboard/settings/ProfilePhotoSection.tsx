@@ -1,19 +1,24 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { userProfile } from "@/data/userProfile"
+import { useAuthStore } from "@/stores/authStore"
+import { userProfile as staticProfile } from "@/data/userProfile"
+import { User } from "lucide-react"
 
 export const ProfilePhotoSection = () => {
+    const { user } = useAuthStore()
     return (
         <div className="bg-card/50 backdrop-blur-md border border-border rounded-[2.5rem] p-8 md:p-10 shadow-sm mb-12">
             <div className="flex flex-col md:flex-row items-center gap-10">
                 <div className="relative group">
-                    <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-4 border-background shadow-2xl group-hover:rotate-3 transition-all duration-500">
-                        <img
-                            src={userProfile.avatar}
-                            alt="Profile"
-                            className="w-full h-full object-cover"
-                        />
+                    <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-4 border-background shadow-2xl group-hover:rotate-3 transition-all duration-500 bg-primary/10 flex items-center justify-center">
+                        {user?.name ? (
+                            <span className="text-4xl font-black text-primary uppercase">
+                                {user.name.split(' ').map(n => n[0]).join('')}
+                            </span>
+                        ) : (
+                            <User className="w-16 h-16 text-primary" />
+                        )}
                     </div>
                     <div className="absolute inset-x-0 bottom-4 px-4 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
                         <div className="bg-background/90 backdrop-blur-sm border border-border rounded-xl py-2 text-center shadow-xl">

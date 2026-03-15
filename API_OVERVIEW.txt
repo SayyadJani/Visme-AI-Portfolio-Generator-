@@ -1,0 +1,84 @@
+PORTFOLIO AUTOMATION TOOL - API DOCUMENTATION
+
+OVERVIEW:
+The system consists of two main servers:
+1. Server 1 (Core API): Manages databases, authentication, file storage, and business logic.
+2. Server 2 (Runtime Agent): Handles the actual execution of Vite dev servers for project previews.
+
+-----------------------------------------------------------
+1. AUTHENTICATION (Server 1)
+-----------------------------------------------------------
+POST /api/auth/register
+   - Description: Create a new account.
+   - Body: { email, password, name }
+   
+POST /api/auth/login
+   - Description: Sign in and receive JWT tokens.
+   - Body: { email, password }
+
+POST /api/auth/logout
+   - Description: End session and clear cookies.
+   - Requires Auth: Yes
+
+POST /api/auth/refresh
+   - Description: Get a new access token using a refresh token.
+
+-----------------------------------------------------------
+2. PROJECTS (Server 1)
+-----------------------------------------------------------
+GET /api/projects/templates
+   - Description: List all available portfolio templates.
+   
+GET /api/projects/
+   - Description: List all projects created by the logged-in user.
+
+POST /api/projects/create
+   - Description: Instantiate a new project from a template.
+   - Body: { templateId, name }
+
+GET /api/projects/:id/files
+   - Description: Get the folder/file structure of a project.
+
+GET /api/projects/:id/files/*
+   - Description: Get the content of a specific file (e.g. src/main.ts).
+
+PUT /api/projects/:id/files/*
+   - Description: Save new content to a specific file.
+
+-----------------------------------------------------------
+3. RESUME (Server 1)
+-----------------------------------------------------------
+POST /api/resume/parse
+   - Description: Upload a PDF. Returns AI-parsed structured data.
+   - Multipart: 'file' field (PDF)
+
+-----------------------------------------------------------
+4. PREVIEWS (Server 1 & 2)
+-----------------------------------------------------------
+POST /api/preview/:projectId/start
+   - Description: Starts a live Vite server for the project.
+   
+POST /api/preview/:projectId/stop
+   - Description: Stops the live server.
+
+GET /api/preview/:projectId/status
+   - Description: Checks if the project is currently running.
+
+-----------------------------------------------------------
+5. DEPLOYMENT (Server 1)
+-----------------------------------------------------------
+POST /api/deploy/:projectId
+   - Description: Trigger a cloud build and deployment.
+
+GET /api/deploy/:deployId/status
+   - Description: Check progress of a deployment.
+
+-----------------------------------------------------------
+6. ADMIN & UTILS
+-----------------------------------------------------------
+POST /api/admin/templates/upload
+   - Description: Upload raw template files to the server.
+
+GET /health
+   - Description: Check server connectivity.
+-----------------------------------------------------------

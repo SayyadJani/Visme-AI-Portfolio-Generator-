@@ -4,6 +4,7 @@ import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { MoreVertical, Layers, Clock, Eye, Edit3, Settings, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
 
 interface PortfolioCardProps {
     title: string
@@ -35,10 +36,13 @@ export const PortfolioCard = memo(({
             {/* Thumbnail */}
             <div className="aspect-[16/10] relative overflow-hidden rounded-2xl bg-muted/40 shadow-inner">
                 {imageUrl ? (
-                    <img
+                    <Image
                         src={imageUrl}
                         alt={title}
+                        width={320}
+                        height={200}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out grayscale-[0.2] group-hover:grayscale-0"
+                        loading="lazy"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">

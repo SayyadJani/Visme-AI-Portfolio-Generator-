@@ -6,13 +6,14 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTemplateStore, Template } from "@/stores/templateStore"
-import { useFileStore, normalizeBackendFiles } from "@/components/builder/fileStore"
+import Image from "next/image"
+import React, { memo } from "react"
 
 interface TemplateCardProps extends Template {
     delay?: number
 }
 
-export const TemplateCard = ({
+export const TemplateCard = memo(({
     id,
     name,
     description,
@@ -25,28 +26,9 @@ export const TemplateCard = ({
 }: TemplateCardProps) => {
     const router = useRouter()
     const setSelectedTemplate = useTemplateStore((state) => state.setSelectedTemplate)
-    const createInstance = useFileStore(s => s.createInstance)
-    const setCurrentInstance = useFileStore(s => s.setCurrentInstance)
 
     const handleUseTemplate = () => {
-        // STEP 1 — User Selects Template
-        console.log("--- STEP 1: Template Selection ---")
-        console.log("Loading template blueprint:", id)
-
-        // 1. Set the selected template in the UI store
         setSelectedTemplate({ id, name, description, previewImage, files })
-        
-        // 2. Create a working copy (Instance Files Created)
-        // Important: instanceFiles ≠ template.files (Deep copy)
-        const instanceId = createInstance(id, name, normalizeBackendFiles(files as any))
-        
-        // 3. Set this instance as active immediately
-        setCurrentInstance(instanceId)
-        
-        console.log("Result of Step 1: Instance Created with ID:", instanceId)
-        console.log("----------------------------------")
-
-        // 4. Navigate to the creation workflow (Resume Upload -> Parsing -> IDE)
         router.push("/dashboard/portfolios/create")
     }
     return (
@@ -58,10 +40,13 @@ export const TemplateCard = ({
         >
             {/* Image Preview */}
             <div className="relative h-56 overflow-hidden">
-                <img
+                <Image
                     src={previewImage}
                     alt={name}
+                    width={400}
+                    height={224}
                     className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
 
@@ -107,4 +92,4 @@ export const TemplateCard = ({
             </div>
         </motion.div>
     )
-}
+})

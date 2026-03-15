@@ -4,6 +4,7 @@ import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ChevronRight, UploadCloud, Code2, Layout, Sparkles, Star } from "lucide-react"
+import Image from "next/image"
 
 export const Hero = memo(() => {
     return (
@@ -63,12 +64,13 @@ export const Hero = memo(() => {
                 >
                     <div className="flex -space-x-3 overflow-hidden">
                         {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="inline-block h-8 w-8 rounded-full border-2 border-background bg-muted shadow-md overflow-hidden">
-                                <img
+                            <div key={i} className="inline-block h-8 w-8 rounded-full border-2 border-background bg-muted shadow-md overflow-hidden relative">
+                                <Image
                                     src={`https://i.pravatar.cc/150?u=${i + 15}`}
                                     alt="User"
+                                    width={32}
+                                    height={32}
                                     className="h-full w-full object-cover"
-                                    loading="lazy"
                                 />
                             </div>
                         ))}

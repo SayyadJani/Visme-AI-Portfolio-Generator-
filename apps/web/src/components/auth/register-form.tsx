@@ -7,8 +7,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 // import { signIn } from "next-auth/react"
 
+import { authService } from "@/services/auth.service"
+import { useAuthStore } from "@/stores/authStore"
+import { useRouter } from "next/navigation"
+
 export function RegisterForm() {
+    const router = useRouter()
+    const setAuth = useAuthStore((state) => state.setAuth)
     const [showPassword, setShowPassword] = React.useState(false)
+    const [isLoading, setIsLoading] = React.useState(false)
+    const [error, setError] = React.useState<string | null>(null)
     const [formData, setFormData] = React.useState({
         name: "",
         email: "",
@@ -19,14 +27,43 @@ export function RegisterForm() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        console.log("REGISTER_SUBMIT_DATA:", formData)
-        // Placeholder for email/password registration logic
-        // await signIn("credentials", { ...formData, redirect: false })
+        
+        if (!formData.agreed) {
+            setError("You must agree to the terms and conditions")
+            return
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            setError("Passwords do not match")
+            return
+        }
+
+        setIsLoading(true)
+        setError(null)
+
+        try {
+            const result = await authService.register({
+                name: formData.name,
+                email: formData.email,
+                password: formData.password
+            })
+            const accessToken = result.tokens?.accessToken || (result as any).accessToken;
+            if (accessToken) {
+                setAuth(result.user, accessToken);
+                router.push("/dashboard");
+            } else {
+                throw new Error("Tokens missing from response");
+            }
+        } catch (err: any) {
+            console.error("REGISTER_ERROR:", err)
+            setError(err.response?.data?.error?.message || "Registration failed. Please try again.")
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     const handleSocialLogin = async (provider: string) => {
         console.log(`SOCIAL_LOGIN_PROVIDER: ${provider}`)
-        // await signIn(provider, { callbackUrl: "/dashboard" })
     }
 
     return (
@@ -73,6 +110,13 @@ export function RegisterForm() {
                     </div>
                 </div>
 
+                {/* Error Message */}
+                {error && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold animate-in fade-in slide-in-from-top-2">
+                        {error}
+                    </div>
+                )}
+
                 {/* Form Logic */}
                 <form onSubmit={handleSubmit} className="space-y-8">
                     <div className="space-y-3">
@@ -85,6 +129,8 @@ export function RegisterForm() {
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 className="pl-12 py-7 rounded-xl bg-white/[0.02] border-white/5 transition-all group-focus-within:border-primary/50"
+                                required
+                                disabled={isLoading}
                             />
                         </div>
                     </div>
@@ -99,6 +145,8 @@ export function RegisterForm() {
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 className="pl-12 py-7 rounded-xl bg-white/[0.02] border-white/5 transition-all group-focus-within:border-primary/50"
+                                required
+                                disabled={isLoading}
                             />
                         </div>
                     </div>
@@ -114,11 +162,14 @@ export function RegisterForm() {
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     className="pl-12 py-7 rounded-xl bg-white/[0.02] border-white/5 transition-all group-focus-within:border-primary/50"
+                                    required
+                                    disabled={isLoading}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                    disabled={isLoading}
                                 >
                                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                 </button>
@@ -135,12 +186,14 @@ export function RegisterForm() {
                                     value={formData.confirmPassword}
                                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                                     className="pl-12 py-7 rounded-xl bg-white/[0.02] border-white/5 transition-all group-focus-within:border-primary/50"
+                                    required
+                                    disabled={isLoading}
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 group cursor-pointer w-fit" onClick={() => setFormData({ ...formData, agreed: !formData.agreed })}>
+                    <div className="flex items-center gap-4 group cursor-pointer w-fit" onClick={() => !isLoading && setFormData({ ...formData, agreed: !formData.agreed })}>
                         <div className={`w-6 h-6 rounded border border-white/10 flex items-center justify-center transition-all ${formData.agreed ? "bg-primary border-primary" : "bg-white/5 group-hover:border-primary"}`}>
                             {formData.agreed && <Lock className="w-3 h-3 text-white" />}
                         </div>
@@ -149,8 +202,12 @@ export function RegisterForm() {
                         </p>
                     </div>
 
-                    <Button type="submit" className="w-full py-8 rounded-xl bg-primary text-white text-lg font-black transition-all hover:scale-105 active:scale-95 shadow-[0_10px_40px_rgba(37,99,235,0.4)] h-auto">
-                        Create Account
+                    <Button 
+                        type="submit" 
+                        disabled={isLoading}
+                        className="w-full py-8 rounded-xl bg-primary text-white text-lg font-black transition-all hover:scale-[1.02] active:scale-95 shadow-[0_10px_40px_rgba(37,99,235,0.4)] h-auto disabled:opacity-50 disabled:scale-100"
+                    >
+                        {isLoading ? "Creating Account..." : "Create Account →"}
                     </Button>
                 </form>
 

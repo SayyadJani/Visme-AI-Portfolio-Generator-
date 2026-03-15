@@ -1,5 +1,3 @@
-"use client"
-
 import { ProjectHistoryHeader } from "@/components/dashboard/history/ProjectHistoryHeader"
 import { ProjectHistoryFilter } from "@/components/dashboard/history/ProjectHistoryFilter"
 import { HistoryPortfolioCard } from "@/components/dashboard/history/HistoryPortfolioCard"

@@ -4,6 +4,8 @@ import { motion } from "framer-motion"
 import { MoreVertical, Layout, Calendar, ExternalLink, Edit2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
+import React, { memo } from "react"
 
 interface HistoryPortfolioCardProps {
     title: string
@@ -14,7 +16,7 @@ interface HistoryPortfolioCardProps {
     delay?: number
 }
 
-export const HistoryPortfolioCard = ({
+export const HistoryPortfolioCard = memo(({
     title,
     template,
     status,
@@ -31,10 +33,13 @@ export const HistoryPortfolioCard = ({
         >
             {/* Thumbnail */}
             <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                <img
+                <Image
                     src={imageUrl}
                     alt={title}
+                    width={400}
+                    height={250}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
@@ -86,4 +91,4 @@ export const HistoryPortfolioCard = ({
             </div>
         </motion.div>
     )
-}
+})

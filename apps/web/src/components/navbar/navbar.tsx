@@ -6,8 +6,11 @@ import { Sparkles, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useAuthStore } from "@/stores/authStore"
+import Image from "next/image"
 
 export const Navbar = memo(() => {
+    const { user, isAuthenticated } = useAuthStore()
     return (
         <motion.nav
             initial={{ y: -15, opacity: 0 }}
@@ -42,26 +45,39 @@ export const Navbar = memo(() => {
                 {/* Right: Actions */}
                 <div className="flex items-center space-x-4">
                     <ThemeToggle />
-                    <div className="hidden sm:flex items-center gap-5">
-                        <Link href="/login" className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors">
-                            Log In
-                        </Link>
+                    
+                    {!isAuthenticated ? (
+                        <>
+                            <div className="hidden sm:flex items-center gap-5">
+                                <Link href="/login" className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors">
+                                    Log In
+                                </Link>
+                            </div>
 
-                        <div className="h-8 w-8 p-0.5 rounded-full bg-gradient-to-tr from-primary to-purple-500 cursor-pointer shadow-sm">
-                            <img
-                                src="https://i.pravatar.cc/150?u=jane"
-                                alt="Profile"
-                                className="h-full w-full rounded-full border-2 border-background"
-                                loading="lazy"
-                            />
+                            <Link href="/register">
+                                <Button className="bg-primary text-white hover:bg-primary/90 font-bold px-5 py-2 rounded-xl text-xs transition-all hover:scale-105 shadow-md h-auto">
+                                    Get Started
+                                </Button>
+                            </Link>
+                        </>
+                    ) : (
+                        <div className="flex items-center gap-4">
+                            <span className="text-xs font-bold text-muted-foreground hidden md:inline-block">
+                                Hi, {user?.name.split(' ')[0]}
+                            </span>
+                            <Link href="/dashboard">
+                                <div className="h-8 w-8 p-0.5 rounded-full bg-gradient-to-tr from-primary to-purple-500 cursor-pointer shadow-sm active:scale-95 transition-transform relative">
+                                    <Image
+                                        src={`https://ui-avatars.com/api/?name=${user?.name}&background=random`}
+                                        alt="Profile"
+                                        width={32}
+                                        height={32}
+                                        className="h-full w-full rounded-full border-2 border-background"
+                                    />
+                                </div>
+                            </Link>
                         </div>
-                    </div>
-
-                    <Link href="/register">
-                        <Button className="bg-primary text-white hover:bg-primary/90 font-bold px-5 py-2 rounded-xl text-xs transition-all hover:scale-105 shadow-md h-auto">
-                            Get Started
-                        </Button>
-                    </Link>
+                    )}
 
                     <button className="md:hidden p-1.5 text-muted-foreground">
                         <Menu className="w-6 h-6" />

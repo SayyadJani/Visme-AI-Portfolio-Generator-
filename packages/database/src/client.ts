@@ -4,11 +4,11 @@ import ws from 'ws';
 import { PrismaClient } from "./generated/prisma";
 
 // Required for Node.js environments when using WebSockets with Neon
-if (typeof window === 'undefined') {
+if (typeof (globalThis as any).window === 'undefined') {
   neonConfig.webSocketConstructor = ws;
 }
 
-const connectionString = process.env.DATABASE_URL!;
+
 
 class PrismaDB {
   private static instance: PrismaClient;
@@ -17,6 +17,10 @@ class PrismaDB {
 
   public static getInstance(): PrismaClient {
     if (!PrismaDB.instance) {
+      const connectionString = process.env.DATABASE_URL;
+      if (!connectionString) {
+        throw new Error('DATABASE_URL environment variable is not set');
+      }
       const adapter = new PrismaNeon({ connectionString });
       
       const prismaClient = new PrismaClient({

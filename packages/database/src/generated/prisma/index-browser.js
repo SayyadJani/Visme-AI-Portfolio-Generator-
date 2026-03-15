@@ -122,9 +122,9 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
 
 exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
-  name: 'name',
   email: 'email',
-  password: 'password',
+  passwordHash: 'passwordHash',
+  name: 'name',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -132,28 +132,68 @@ exports.Prisma.UserScalarFieldEnum = {
 exports.Prisma.TemplateScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  slug: 'slug',
   description: 'description',
-  thumbnail: 'thumbnail',
   techStack: 'techStack',
-  folderName: 'folderName',
+  domain: 'domain',
+  gitRepoUrl: 'gitRepoUrl',
+  thumbUrl: 'thumbUrl',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ProjectScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  templateId: 'templateId',
+  name: 'name',
+  diskPath: 'diskPath',
+  status: 'status',
+  previewUrl: 'previewUrl',
+  lastSavedAt: 'lastSavedAt',
+  lastOpenedAt: 'lastOpenedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ResumeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  parsedJson: 'parsedJson',
+  rawPath: 'rawPath',
   createdAt: 'createdAt'
 };
 
-exports.Prisma.InstanceScalarFieldEnum = {
+exports.Prisma.DeploymentScalarFieldEnum = {
   id: 'id',
-  name: 'name',
+  projectId: 'projectId',
   userId: 'userId',
-  templateId: 'templateId',
   status: 'status',
-  deployedUrl: 'deployedUrl',
-  folderPath: 'folderPath',
+  url: 'url',
+  error: 'error',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  completedAt: 'completedAt'
+};
+
+exports.Prisma.ProjectSnapshotScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  type: 'type',
+  label: 'label',
+  filesJson: 'filesJson',
+  fileCount: 'fileCount',
+  sizeBytes: 'sizeBytes',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -165,17 +205,40 @@ exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
-exports.InstanceStatus = exports.$Enums.InstanceStatus = {
-  ACTIVE: 'ACTIVE',
-  DEPLOYING: 'DEPLOYING',
-  DEPLOYED: 'DEPLOYED',
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+exports.ProjectStatus = exports.$Enums.ProjectStatus = {
+  CREATING: 'CREATING',
+  READY: 'READY',
+  SLEEPING: 'SLEEPING',
   ERROR: 'ERROR'
+};
+
+exports.DeploymentStatus = exports.$Enums.DeploymentStatus = {
+  QUEUED: 'QUEUED',
+  BUILDING: 'BUILDING',
+  LIVE: 'LIVE',
+  FAILED: 'FAILED'
+};
+
+exports.SnapshotType = exports.$Enums.SnapshotType = {
+  AUTO: 'AUTO',
+  MANUAL: 'MANUAL',
+  PREDEPLOY: 'PREDEPLOY',
+  PRERESTORE: 'PRERESTORE'
 };
 
 exports.Prisma.ModelName = {
   User: 'User',
   Template: 'Template',
-  Instance: 'Instance'
+  Project: 'Project',
+  Resume: 'Resume',
+  Deployment: 'Deployment',
+  ProjectSnapshot: 'ProjectSnapshot'
 };
 
 /**

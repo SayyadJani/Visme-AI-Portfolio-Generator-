@@ -3,7 +3,11 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 import { validateAndLog } from "./validateTemplate"
-import { ReconciliationData, ExperienceEntry } from "../portfolio/parsing/types"
+import { ReconciliationData } from "../portfolio/parsing/types"
+import { projectService } from "@/services/project.service"
+import { resumeService } from "@/services/resume.service"
+import { previewService } from "@/services/preview.service"
+import { TemplateDTO, ProjectDTO, FileNode } from "@repo/types"
 
 export interface VirtualFile { code: string; language?: string }
 export type VirtualFileSystem = Record<string, VirtualFile>
@@ -13,6 +17,7 @@ export interface Instance {
 }
 
 interface FileStoreState {
+    projects: ProjectDTO[]
     instances: Record<string, Instance>
     currentInstanceId: string | null
     projectFiles: VirtualFileSystem
@@ -23,10 +28,15 @@ interface FileStoreState {
     resumeText: string | null
     parsedResume: ReconciliationData | null
     suggestedChanges: { filePath: string; originalCode: string; proposedCode: string } | null
-    createInstance: (templateId: string, templateName: string, templateFiles: VirtualFileSystem) => string
-    setCurrentInstance: (instanceId: string) => void
+    previewUrl: string | null
+    isPreviewLoading: boolean
+    loadProjects: () => Promise<void>
+    startPreview: () => Promise<void>
+    setCurrentInstance: (instanceId: string) => void | Promise<void>
     updateFile: (path: string, code: string) => void
     setActiveFile: (path: string) => void
+    loadFile: (path: string) => Promise<void>
+    loadAllProjectFiles: () => Promise<void>
     setEditorBuffer: (path: string, code: string) => void
     saveFile: (path: string) => void
     saveAllFiles: () => void
@@ -37,7 +47,8 @@ interface FileStoreState {
     forceRefresh: () => void // New method to force re-key
     refreshKey: number
     setResumeFile: (file: File) => void
-    performMockParsing: () => Promise<void>
+    performParsing: () => Promise<void>
+    createProject: (templateId: string, name?: string) => Promise<ProjectDTO>
     generateSuggestions: () => void
     acceptSuggestions: () => void
     rejectSuggestions: () => void
@@ -48,6 +59,7 @@ let syncSeq = 0
 export const useFileStore = create<FileStoreState>()(
     persist(
         (set, get) => ({
+            projects: [],
             instances: {},
             currentInstanceId: null,
             projectFiles: {},
@@ -59,151 +71,273 @@ export const useFileStore = create<FileStoreState>()(
             resumeText: null,
             parsedResume: null,
             suggestedChanges: null,
+            previewUrl: null,
+            isPreviewLoading: false,
 
             // ─────────────────────────────────────────────────────────────────
-            setResumeFile: (file) => set({ resumeFile: file, resumeText: "Mock Resume Text" }),
+            setResumeFile: (file) => set({ resumeFile: file }),
 
-            performMockParsing: async () => {
-                await new Promise(r => setTimeout(r, 1500))
-                // Full ReconciliationData shape — covers every field accessed by
-                // ParsingHeader, PersonalIdentitySection, ExperienceSection, SidePanel, ControlBar
-                set({
-                    parsedResume: {
-                        progress: 85,
-                        unresolvedWarnings: 2,
-                        extraSections: 1,
-                        accuracy: "85% Data Accuracy",
-                        personalDetails: {
-                            fullName: "Jani Pasha",
-                            email: "jani.pasha@example.com",
-                            github: "janipasha-dev",
-                            linkedin: "jani-pasha",
-                            summary: "Expert Full Stack Developer specializing in automation tools and scalable web applications.",
+            performParsing: async () => {
+                const { resumeFile } = get()
+                if (!resumeFile) return
+
+                try {
+                    const parsed = await resumeService.parseResume(resumeFile)
+                    if (!parsed || !parsed.personal) {
+                        throw new Error("Invalid resume data received from server");
+                    }
+
+                    // Map ParsedData to ReconciliationData for the UI
+                    set({
+                        parsedResume: {
+                            progress: 100,
+                            unresolvedWarnings: 0,
+                            extraSections: 0,
+                            accuracy: "AI Extracted Data",
+                            personalDetails: {
+                                fullName: parsed.personal.name,
+                                email: parsed.personal.email,
+                                github: parsed.personal.github,
+                                linkedin: parsed.personal.linkedin,
+                                summary: parsed.summary,
+                            },
+                            skills: parsed.skills,
+                            experience: parsed.experiences.map(exp => ({
+                                role: exp.title,
+                                company: exp.company,
+                                period: exp.period,
+                                desc: exp.bullets
+                            })),
+                            missingRequired: [],
+                            orphanedData: [],
                         },
-                        skills: ["React", "Next.js", "TypeScript", "Node.js", "TailwindCSS"],
-                        experience: [
-                            {
-                                role: "Senior Engineer",
-                                company: "Innovate AI",
-                                period: "2021 – Present",
-                                desc: "Building automation tools and AI-driven portfolio generation platforms at scale.",
-                            },
-                        ],
-                        missingRequired: [
-                            {
-                                id: "bio",
-                                title: "Portfolio Bio",
-                                desc: "The selected template requires a 150-word landing bio.",
-                                placeholder: "Enter your portfolio bio...",
-                            },
-                        ],
-                        orphanedData: [
-                            {
-                                id: "cert",
-                                title: "Certifications",
-                                content: "AWS Certified Solutions Architect – Associate (2022).",
-                            },
-                        ],
-                    },
-                })
+                    })
+                } catch (error) {
+                    console.error("PARSING_ERROR:", error)
+                    throw error
+                }
             },
 
             generateSuggestions: () => {
-                const { currentInstanceId, instances, parsedResume, projectFiles } = get()
-                if (!currentInstanceId || !parsedResume) return
-
-                // Find the data file in the CURRENT project files
-                const dataPath = Object.keys(projectFiles).find(p => p.includes("portfolioData"))
-                if (!dataPath) return
-
-                const fileEntry = projectFiles[dataPath]
-                if (!fileEntry) return
-
-                const originalCode = fileEntry.code
-
-                // Simulation of "Smart Comparison" logic
-                // In a real app, this would be a DIFF or a structured merge
-                const proposedCode = [
-                    `export const portfolioData = {`,
-                    `  name: "${parsedResume.personalDetails.fullName}",`,
-                    `  role: "Full Stack Developer",`,
-                    `  skills: ${JSON.stringify(parsedResume.skills, null, 2)},`,
-                    `  projects: ${JSON.stringify(parsedResume.experience.map(e => ({ title: e.role, description: e.desc })), null, 2)}`,
-                    `};`
-                ].join("\n")
-
-                console.log("[Store] 🤖 AI Scan Complete — Suggestions found for:", dataPath)
-                set({ suggestedChanges: { filePath: dataPath, originalCode, proposedCode } })
+                // TODO: Implement actual AI data injection later
+                set({ suggestedChanges: null })
             },
 
-            // ─────────────────────────────────────────────────────────────────
-            createInstance: (tId, name, files) => {
-                let filesCopy: VirtualFileSystem = JSON.parse(JSON.stringify(files))
-                const validation = validateAndLog(filesCopy)
-                if (validation.fixedFiles) filesCopy = validation.fixedFiles
-
-                const id = `inst-${Date.now()}`
-                // Normalize all keys in filesCopy
-                const normalizedFiles: VirtualFileSystem = {}
-                Object.entries(filesCopy).forEach(([p, f]) => {
-                    normalizedFiles[normalizePath(p)] = f
-                })
-
-                const newInstance: Instance = {
-                    instanceId: id, templateId: tId, name,
-                    files: normalizedFiles, createdAt: Date.now(), updatedAt: Date.now()
+            loadProjects: async () => {
+                try {
+                    const projects = await projectService.getProjects()
+                    set({ projects })
+                } catch (error) {
+                    console.error("LOAD_PROJECTS_ERROR:", error)
                 }
-
-                const activeFile = normalizedFiles["src/App.js"] ? "src/App.js"
-                    : normalizedFiles["src/App.jsx"] ? "src/App.jsx"
-                        : Object.keys(normalizedFiles)[0] ?? ""
-
-                console.group("%c[Store] createInstance", "color:#00d4aa;font-weight:bold")
-                console.log("  id         :", id)
-                console.log("  activeFile :", activeFile)
-                console.log("  files      :", Object.keys(filesCopy))
-                console.groupEnd()
-
-                set({
-                    instances: { ...get().instances, [id]: newInstance },
-                    currentInstanceId: id,
-                    projectFiles: normalizedFiles,
-                    activeFile,
-                    editorBuffers: {},
-                    pendingSandpackSync: null,
-                })
-                return id
             },
 
-            setCurrentInstance: (id) => {
+            startPreview: async () => {
+                const { currentInstanceId } = get()
+                if (!currentInstanceId) return
+
+                set({ isPreviewLoading: true })
+                try {
+                    await previewService.startPreview(Number(currentInstanceId))
+                    
+                    // Poll for status until active and previewUrl is present
+                    let attempts = 0
+                    const maxAttempts = 15
+                    const poll = async () => {
+                        if (attempts >= maxAttempts) {
+                            set({ isPreviewLoading: false })
+                            return
+                        }
+                        attempts++
+                        const status = await previewService.getStatus(Number(currentInstanceId))
+                        if (status.isActive && status.previewUrl) {
+                            set({ previewUrl: status.previewUrl, isPreviewLoading: false })
+                        } else {
+                            setTimeout(poll, 2000)
+                        }
+                    }
+                    poll()
+                } catch (error) {
+                    console.error("START_PREVIEW_ERROR:", error)
+                    set({ isPreviewLoading: false })
+                }
+            },
+
+            // ─── Real Backend Integration ─────────────────────────────────────
+            createProject: async (templateId, name) => {
+                try {
+                    const project = await projectService.createProject({ templateId, name: name || "" })
+
+                    const newInstance: Instance = {
+                        instanceId: String(project.id),
+                        templateId,
+                        name: project.name,
+                        files: {},
+                        createdAt: new Date(project.createdAt).getTime(),
+                        updatedAt: Date.now()
+                    }
+
+                    // 1. First update metadata and current ID so loadAllProjectFiles knows what to do
+                    set({
+                        projects: [...get().projects, project],
+                        instances: { ...get().instances, [project.id]: newInstance },
+                        currentInstanceId: String(project.id),
+                        projectFiles: {},
+                        editorBuffers: {},
+                        pendingSandpackSync: null,
+                    })
+
+                    // 2. Fetch the actual files from the backend
+                    await get().loadAllProjectFiles()
+
+                    return project
+                } catch (error) {
+                    console.error("CREATE_PROJECT_ERROR:", error)
+                    throw error
+                }
+            },
+
+            setCurrentInstance: async (id: string) => {
                 const inst = get().instances[id]
                 if (!inst) return
-                const activeFile = inst.files["src/App.js"] ? "src/App.js"
-                    : inst.files["src/App.jsx"] ? "src/App.jsx"
-                        : Object.keys(inst.files)[0]
+
                 console.log("[Store] setCurrentInstance →", id)
-                set({ currentInstanceId: id, projectFiles: inst.files, activeFile, editorBuffers: {}, pendingSandpackSync: null })
+
+                // Set the basic state first
+                set({
+                    currentInstanceId: id,
+                    projectFiles: inst?.files || {},
+                    editorBuffers: {},
+                    pendingSandpackSync: null
+                })
+
+                // If instance record is missing (e.g. after refresh) or files are empty
+                if (!inst || Object.keys(inst.files).length === 0) {
+                    console.log("[Store] Project files missing or empty, fetching from backend...")
+                    await get().loadAllProjectFiles()
+                } else {
+                    // Just set the active file from existing ones
+                    const activeFile = inst.files["src/App.js"] ? "src/App.js"
+                        : inst.files["src/App.jsx"] ? "src/App.jsx"
+                            : Object.keys(inst.files)[0] || ""
+                    set({ activeFile })
+                }
             },
 
-            // ─── updateFile: writes to VFS only, does NOT signal Sandpack ────
+            loadFile: async (path) => {
+                const { currentInstanceId, projectFiles } = get()
+                if (!currentInstanceId) return
+
+                // If already has code, don't re-fetch
+                if (projectFiles[path]?.code) return
+
+                try {
+                    const { content } = await projectService.getFileContent(Number(currentInstanceId), path)
+                    get().updateFile(path, content)
+                } catch (err) {
+                    console.error(`[Store] Failed to load file ${path}:`, err)
+                }
+            },
+
+            loadAllProjectFiles: async () => {
+                const { currentInstanceId } = get()
+                if (!currentInstanceId) return
+
+                try {
+                    const { tree } = await projectService.getFileTree(Number(currentInstanceId))
+
+                    // Flatten tree to get all file paths
+                    const allFiles: string[] = []
+                    const walk = (nodes: FileNode[]) => {
+                        nodes.forEach(node => {
+                            if (node.type === 'file') allFiles.push(node.path)
+                            if (node.children) walk(node.children)
+                        })
+                    }
+                    walk(tree)
+
+                    console.log(`[Store] Found ${allFiles.length} files in tree. Loading contents...`)
+
+                    // Fetch all file contents in parallel
+                    // Note: In a massive project this would be bad, but our templates are small.
+                    const result = await Promise.all(
+                        allFiles.map(async (path) => {
+                            try {
+                                const res = await projectService.getFileContent(Number(currentInstanceId), path)
+                                return { path, content: res.content }
+                            } catch {
+                                return null
+                            }
+                        })
+                    )
+
+                    const updatedFiles: VirtualFileSystem = {}
+                    result.forEach((item) => {
+                        if (item) {
+                            updatedFiles[normalizePath(item.path)] = {
+                                code: item.content,
+                                language: inferLanguage(item.path)
+                            }
+                        }
+                    })
+
+                    const activeFile = updatedFiles["src/App.js"] ? "src/App.js"
+                        : updatedFiles["src/App.jsx"] ? "src/App.jsx"
+                            : updatedFiles["src/index.js"] ? "src/index.js"
+                                : Object.keys(updatedFiles)[0] || ""
+
+                    set(s => {
+                        const instances = { ...s.instances };
+                        if (instances[currentInstanceId]) {
+                            instances[currentInstanceId] = {
+                                ...instances[currentInstanceId],
+                                files: updatedFiles,
+                                updatedAt: Date.now()
+                            };
+                        }
+                        return {
+                            projectFiles: updatedFiles,
+                            activeFile,
+                            refreshKey: s.refreshKey + 1,
+                            instances
+                        };
+                    })
+                } catch (err) {
+                    console.error("[Store] Failed to load project tree/files:", err)
+                }
+            },
+
             updateFile: (path, code) => set(s => {
                 const id = s.currentInstanceId
                 if (!id || !s.instances[id]) { console.error("[Store] updateFile: no instance!"); return s }
                 const normalizedPath = normalizePath(path)
                 const updatedFiles: VirtualFileSystem = { ...s.projectFiles, [normalizedPath]: { code, language: inferLanguage(normalizedPath) } }
+
+                const instances = { ...s.instances };
+                if (instances[id]) {
+                    instances[id] = {
+                        ...instances[id],
+                        files: updatedFiles,
+                        updatedAt: Date.now()
+                    };
+                }
                 return {
                     projectFiles: updatedFiles,
-                    instances: { ...s.instances, [id]: { ...s.instances[id], files: updatedFiles, updatedAt: Date.now() } }
-                }
+                    instances
+                };
             }),
 
             setEditorBuffer: (p, c) => set(s => ({ editorBuffers: { ...s.editorBuffers, [p]: c } })),
-            setActiveFile: (path) => set({ activeFile: path }),
+            setActiveFile: (path) => {
+                set({ activeFile: path })
+                // Trigger background load if content missing
+                get().loadFile(path)
+            },
             clearPendingSync: () => set({ pendingSandpackSync: null }),
 
-            // ─── saveFile: reads buffer, writes to VFS, signals Sandpack ──────
-            saveFile: (path) => {
-                const { editorBuffers, projectFiles } = get()
+            // ─── saveFile: reads buffer, writes to API, signals UI ──────
+            saveFile: async (path) => {
+                const { editorBuffers, projectFiles, currentInstanceId } = get()
                 const code = editorBuffers[path]
 
                 if (code === undefined) {
@@ -211,42 +345,63 @@ export const useFileStore = create<FileStoreState>()(
                     return
                 }
 
-                const oldInstanceCode = JSON.stringify(projectFiles, null, 2)
-                const newInstanceFiles = { ...projectFiles, [path]: { ...projectFiles[path], code } }
-                const newInstanceCode = JSON.stringify(newInstanceFiles, null, 2)
+                if (!currentInstanceId) {
+                    console.error("[Store] Cannot save file: no active instance ID")
+                    return
+                }
 
-                console.group(`%c[Store] 💾 INSTANCE SAVED: "${path}"`, "color:#7c6aff;font-weight:bold;font-size:12px")
-                console.log("%c--- OLD INSTANCE STATE ---", "color:#ef4444;font-weight:bold")
-                console.log(oldInstanceCode)
-                console.log("%c--- NEW INSTANCE STATE ---", "color:#22c55e;font-weight:bold")
-                console.log(newInstanceCode)
-                console.log("%cChange Detected:", "color:#3b82f6", projectFiles[path]?.code !== code)
-                console.groupEnd()
+                const normalizedPath = normalizePath(path)
 
-                get().updateFile(path, code)
+                try {
+                    // 1. Actually Save to Backend Disk
+                    await projectService.saveFileContent(Number(currentInstanceId), normalizedPath, code)
 
-                set(s => {
-                    const next = { ...s.editorBuffers }
-                    delete next[path]
-                    const seq = ++syncSeq
-                    const normalizedPath = normalizePath(path)
-                    console.log(`[Store] 🔔 pendingSandpackSync → seq=${seq} file="${normalizedPath}"`)
-                    return { editorBuffers: next, pendingSandpackSync: { seq, files: { [normalizedPath]: code } } }
-                })
+                    console.group(`%c[Store] 💾 API SAVED: "${normalizedPath}"`, "color:#7c6aff;font-weight:bold;font-size:12px")
+                    console.log("%cChange Detected:", "color:#3b82f6", projectFiles[path]?.code !== code)
+                    console.groupEnd()
+
+                    // 2. Update Local State to reflect it is clean
+                    get().updateFile(normalizedPath, code)
+
+                    set(s => {
+                        const next = { ...s.editorBuffers }
+                        delete next[path]
+                        return { editorBuffers: next } // No longer using Sandpack sync object
+                    })
+                } catch (err) {
+                    console.error(`[Store] Failed to save file ${normalizedPath} to backend:`, err)
+                    // TODO: Could show a toast notification here in the future
+                }
             },
 
-            saveAllFiles: () => {
-                const { editorBuffers, updateFile } = get()
+            saveAllFiles: async () => {
+                const { editorBuffers, updateFile, currentInstanceId } = get()
                 const paths = Object.keys(editorBuffers)
                 if (!paths.length) return
-                const payload: Record<string, string> = {}
-                paths.forEach(p => {
-                    const normalized = normalizePath(p)
-                    updateFile(normalized, editorBuffers[p]!)
-                    payload[normalized] = editorBuffers[p]!
-                })
-                console.log("[Store] saveAllFiles →", Object.keys(payload))
-                set({ editorBuffers: {}, pendingSandpackSync: { seq: ++syncSeq, files: payload } })
+
+                if (!currentInstanceId) {
+                    console.error("[Store] Cannot save files: no active instance ID")
+                    return
+                }
+
+                try {
+                    // Start saving all dirty files to backend in parallel
+                    await Promise.all(
+                        paths.map(async (p) => {
+                            const normalized = normalizePath(p)
+                            const code = editorBuffers[p]!
+                            await projectService.saveFileContent(Number(currentInstanceId), normalized, code)
+                            updateFile(normalized, code)
+                        })
+                    )
+
+                    console.log("[Store] saveAllFiles → ✅ Success:", paths)
+                    
+                    // Clear all dirty buffers
+                    set({ editorBuffers: {} })
+                } catch (err) {
+                    console.error("[Store] saveAllFiles → ❌ Failed:", err)
+                }
             },
 
             // ─── applyAIChanges: used by external callers ────────────────────
@@ -319,12 +474,25 @@ export const useFileStore = create<FileStoreState>()(
                 // but removing it from projectFiles will trigger a reload via the Provider fallback.
             },
 
-            forceRefresh: () => set(s => ({ refreshKey: s.refreshKey + 1 })),
+            forceRefresh: async () => {
+                set(s => ({ refreshKey: s.refreshKey + 1 }))
+                await get().loadAllProjectFiles()
+            },
         }),
         {
-            name: "vfs-store-v9",
-            version: 9,
+            name: "vfs-store-v10",
+            version: 10,
             storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({
+                currentInstanceId: state.currentInstanceId,
+                activeFile: state.activeFile,
+                resumeText: state.resumeText,
+                parsedResume: state.parsedResume,
+                projects: state.projects, // Metadata is small and safe to persist
+                // We EXCLUDE 'instances' and 'projectFiles' from localStorage!
+                // These contain full source code of every file, which easily exceeds the 5MB limit.
+                // We rely on loadAllProjectFiles() to re-fetch from backend upon reload.
+            }),
             onRehydrateStorage: () => (state) => {
                 if (state) {
                     // 1) Clear transient signals
@@ -366,12 +534,22 @@ export const useFileStore = create<FileStoreState>()(
 
 export function normalizePath(path: string): string {
     if (!path) return ""
-    return path.startsWith("/") ? path.slice(1) : path
+    const normalized = path.replace(/\\/g, "/")
+    return normalized.startsWith("/") ? normalized.slice(1) : normalized
 }
 
 export function inferLanguage(filePath: string): string {
     const ext = filePath.split(".").pop()?.toLowerCase() ?? ""
-    return ({ js: "javascript", jsx: "javascript", ts: "typescript", tsx: "typescript", css: "css", html: "html", json: "json" } as any)[ext] ?? "plaintext"
+    const mapping: Record<string, string> = {
+        js: "javascript",
+        jsx: "javascript",
+        ts: "typescript",
+        tsx: "typescript",
+        css: "css",
+        html: "html",
+        json: "json"
+    }
+    return mapping[ext] ?? "plaintext"
 }
 
 export function normalizeBackendFiles(raw: Record<string, any>): VirtualFileSystem {

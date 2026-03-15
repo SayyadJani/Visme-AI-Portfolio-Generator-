@@ -20,8 +20,26 @@ const navItems = [
     { icon: Settings, label: "Settings", href: "/settings" },
 ]
 
+import { authService } from "@/services/auth.service"
+import { useAuthStore } from "@/stores/authStore"
+import { useRouter } from "next/navigation"
+
 export const Sidebar = () => {
     const pathname = usePathname()
+    const router = useRouter()
+    const clearAuth = useAuthStore((state) => state.clearAuth)
+
+    const handleLogout = async () => {
+        try {
+            await authService.logout()
+            clearAuth()
+            router.push("/")
+        } catch (err) {
+            console.error("LOGOUT_ERROR:", err)
+            clearAuth() // Clear anyway
+            router.push("/")
+        }
+    }
 
     return (
         <aside className="fixed left-6 top-24 bottom-6 w-64 hidden xl:block">
@@ -52,7 +70,10 @@ export const Sidebar = () => {
                 </div>
 
                 <div className="pt-4 border-t border-white/5 mt-4">
-                    <button className="flex items-center space-x-3 w-full p-3 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 group">
+                    <button 
+                        onClick={handleLogout}
+                        className="flex items-center space-x-3 w-full p-3 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 group"
+                    >
                         <LogOut className="w-5 h-5" />
                         <span className="font-medium">Logout</span>
                     </button>

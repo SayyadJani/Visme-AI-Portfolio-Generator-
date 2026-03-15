@@ -1,89 +1,16 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
-import { SandpackProvider, useSandpack } from "@codesandbox/sandpack-react"
+import React, { useEffect } from "react"
 import { useFileStore } from "./fileStore"
 import BuilderLayout from "./builderLayout"
 import { useRouter } from "next/navigation"
 import {
-    ArrowLeft, Globe, Download, Share2, Rocket, ChevronDown,
-    Settings, Wifi, WifiOff
+    ArrowLeft, Globe, Download, Share2, Rocket, Settings, Wifi
 } from "lucide-react"
-import { useTemplateStore } from "@/stores/templateStore"
-import { templates } from "@/data/templates/index"
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SandpackSyncBridge — pure logic, no UI
-// ─────────────────────────────────────────────────────────────────────────────
-function SandpackSyncBridge() {
-    const { sandpack } = useSandpack()
-    const pendingSandpackSync = useFileStore(s => s.pendingSandpackSync)
-    const clearPendingSync = useFileStore(s => s.clearPendingSync)
-    const lastSeq = useRef<number>(-1)
-
-    useEffect(() => {
-        if (!pendingSandpackSync) return
-        if (pendingSandpackSync.seq === lastSeq.current) return
-
-        if (sandpack.status !== "running" && sandpack.status !== "idle") {
-            console.warn(`[Bridge] Sandpack not ready (${sandpack.status}), will retry on status change`)
-            return
-        }
-
-        lastSeq.current = pendingSandpackSync.seq
-
-        console.group(`%c[Bridge] ▶ Sync #${pendingSandpackSync.seq}`, "color:#7c6aff;font-weight:bold")
-        console.log("[Bridge] Files to push:", Object.keys(pendingSandpackSync.files))
-
-        let allOk = true
-        Object.entries(pendingSandpackSync.files).forEach(([path, code]) => {
-            const cleanPath = path.startsWith("/") ? path.slice(1) : path
-            try {
-                sandpack.updateFile(cleanPath, code)
-                const received = (sandpack.files as any)[cleanPath]?.code
-                if (received === code) {
-                    console.log(`[Bridge] ✅ "${cleanPath}" — verified sync`)
-                } else {
-                    console.warn(`[Bridge] ⚠️ "${cleanPath}" — verification failed for "${cleanPath}"`)
-                    allOk = false
-                }
-            } catch (err) {
-                console.error(`[Bridge] ❌ updateFile("${cleanPath}") error:`, err)
-                allOk = false
-            }
-        })
-
-        if (!allOk) { 
-            console.log("[Bridge] Partial sync issues, skipping runSandpack")
-            // Still clear it so we don't loop forever
-        }
-
-        try {
-            sandpack.runSandpack()
-            console.log("[Bridge] 🚀 runSandpack() triggered")
-        } catch (err) {
-            console.warn("[Bridge] runSandpack() hint:", err)
-            try { (sandpack as any).dispatch?.({ type: "refresh" }) } catch { /* noop */ }
-        }
-
-        console.groupEnd()
-        clearPendingSync()
-    }, [pendingSandpackSync?.seq, sandpack.status])
-
-    return null
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Top Navbar
-// ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// Top Navbar
-// ─────────────────────────────────────────────────────────────────────────────
 function TopNav() {
     const router = useRouter()
-    const { selectedTemplate } = useTemplateStore()
-    const [isLive] = useState(true)
-    const [isFullscreen, setIsFullscreen] = useState(false)
+    const [isFullscreen, setIsFullscreen] = React.useState(false)
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -105,7 +32,6 @@ function TopNav() {
 
     return (
         <header className="h-12 shrink-0 flex items-center justify-between px-4 bg-[#0d0d10] border-b border-[#1c1c22] z-50 select-none shadow-xl">
-            {/* Left — back + branding */}
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => router.back()}
@@ -114,9 +40,7 @@ function TopNav() {
                 >
                     <ArrowLeft className="w-4 h-4" />
                 </button>
-
                 <div className="h-4 w-[1px] bg-[#1c1c22]" />
-
                 <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20 rotate-3">
                         <Rocket className="text-white w-4 h-4 -rotate-3" />
@@ -132,12 +56,11 @@ function TopNav() {
                 </div>
             </div>
 
-            {/* Center — Project Info */}
             <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-[#16161a] rounded-full border border-[#1c1c22] shadow-inner">
                 <div className="flex items-center gap-1.5">
-                    <div className={`w-1.5 h-1.5 rounded-full ${isLive ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse" : "bg-red-500"}`} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse" />
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                        {isLive ? "Synchronized" : "Disconnected"}
+                        Synchronized
                     </span>
                 </div>
                 <div className="w-[1px] h-3 bg-[#1c1c22]" />
@@ -146,7 +69,6 @@ function TopNav() {
                 </span>
             </div>
 
-            {/* Right — actions */}
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1 bg-[#16161a] p-1 rounded-lg border border-[#1c1c22]">
                     <button
@@ -154,7 +76,7 @@ function TopNav() {
                         className="p-1.5 hover:bg-[#1c1c22] rounded-md text-muted-foreground hover:text-foreground transition-all duration-200"
                         title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
                     >
-                        {isFullscreen ? <Settings className="w-3.5 h-3.5 antialiased" /> : <Settings className="w-3.5 h-3.5" />}
+                        <Settings className="w-3.5 h-3.5" />
                     </button>
                     <button className="p-1.5 hover:bg-[#1c1c22] rounded-md text-muted-foreground hover:text-foreground transition-all duration-200">
                         <Share2 className="w-3.5 h-3.5" />
@@ -176,25 +98,29 @@ function TopNav() {
     )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bottom Status Bar
-// ─────────────────────────────────────────────────────────────────────────────
 function StatusBar() {
     const activeFile = useFileStore(s => s.activeFile)
-    const { sandpack } = useSandpack()
+    const previewUrl = useFileStore(s => s.previewUrl)
 
-    const isReady = sandpack.status === "running" || sandpack.status === "idle"
     const lang = activeFile ? (() => {
         const ext = activeFile.split(".").pop()?.toLowerCase() ?? ""
-        return ({ js: "JavaScript", jsx: "JavaScript (React)", ts: "TypeScript", tsx: "TypeScript (React)", css: "CSS", html: "HTML", json: "JSON" } as any)[ext] ?? "Plain Text"
+        return ({ 
+            js: "JavaScript", 
+            jsx: "JavaScript (React)", 
+            ts: "TypeScript", 
+            tsx: "TypeScript (React)", 
+            css: "CSS", 
+            html: "HTML", 
+            json: "JSON" 
+        } as any)[ext] ?? "Plain Text"
     })() : ""
 
     return (
         <div className="h-7 shrink-0 flex items-center justify-between px-3 bg-[#0d0d10] border-t border-[#1c1c22] text-[9px] font-bold uppercase tracking-widest select-none z-50 text-muted-foreground/60">
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-[#16161a] border border-[#1c1c22]">
-                    <div className={`w-1.5 h-1.5 rounded-full ${isReady ? "bg-indigo-500 shadow-[0_0_6px_rgba(99,102,241,0.5)]" : "bg-yellow-500 animate-pulse"}`} />
-                    <span className="text-muted-foreground">{isReady ? "Systems Ready" : "Initializing"}</span>
+                    <div className={`w-1.5 h-1.5 rounded-full ${previewUrl ? "bg-indigo-500 shadow-[0_0_6px_rgba(99,102,241,0.5)]" : "bg-yellow-500 animate-pulse"}`} />
+                    <span className="text-muted-foreground">{previewUrl ? "Systems Ready" : "Initializing"}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <Wifi className="w-3 h-3" />
@@ -224,27 +150,18 @@ function StatusBar() {
     )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Builder
-// ─────────────────────────────────────────────────────────────────────────────
 export default function Builder() {
     const currentInstanceId = useFileStore(s => s.currentInstanceId)
     const instances = useFileStore(s => s.instances)
-    const refreshKey = useFileStore(s => s.refreshKey)
+    const startPreview = useFileStore(s => s.startPreview)
 
     const currentInstance = currentInstanceId ? instances[currentInstanceId] : null
-    const selectedTemplate = templates.find(t => t.id === currentInstance?.templateId)
 
-    const sandpackFiles = React.useMemo(() => {
-        const projectFiles = useFileStore.getState().projectFiles
-        console.log("[Builder] ⚡ Computing mount-time sandpackFiles — instance:", currentInstanceId)
-        return Object.fromEntries(
-            Object.entries(projectFiles).map(([p, f]) => [
-                p.startsWith("/") ? p.slice(1) : p,
-                { code: f.code }
-            ])
-        )
-    }, [currentInstanceId, refreshKey]) // NOT projectFiles! Bridge handles updates.
+    useEffect(() => {
+        if (currentInstanceId) {
+            startPreview()
+        }
+    }, [currentInstanceId])
 
     if (!currentInstanceId || !currentInstance) {
         return (
@@ -258,45 +175,13 @@ export default function Builder() {
         )
     }
 
-    const dependencies = {
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        ...(selectedTemplate?.dependencies || {})
-    }
-
-
     return (
-        <SandpackProvider
-            key={`${currentInstanceId}-${refreshKey}`}
-            template="react"
-            files={sandpackFiles}
-            options={{
-                autorun: true,
-                recompileMode: "delayed",
-                recompileDelay: 300,
-                bundlerTimeOut: 60000,
-                logLevel: 0 as any,
-            }}
-            customSetup={{
-                entry: "src/index.js",
-                dependencies: dependencies
-            }}
-        >
-            <SandpackSyncBridge />
-
-            {/* Full-screen IDE layout */}
-            <div className="flex flex-col h-screen w-screen bg-[#0b0b0e] overflow-hidden">
-                {/* Top navbar */}
-                <TopNav />
-
-                {/* Three-pane editor body */}
-                <div className="flex-1 min-h-0 overflow-hidden">
-                    <BuilderLayout />
-                </div>
-
-                {/* Bottom status bar */}
-                <StatusBar />
+        <div className="flex flex-col h-screen w-screen bg-[#0b0b0e] overflow-hidden">
+            <TopNav />
+            <div className="flex-1 min-h-0 overflow-hidden">
+                <BuilderLayout />
             </div>
-        </SandpackProvider>
+            <StatusBar />
+        </div>
     )
 }

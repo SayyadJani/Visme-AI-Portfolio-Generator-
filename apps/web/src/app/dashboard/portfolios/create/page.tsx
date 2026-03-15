@@ -20,9 +20,9 @@ export default function CreatePortfolioPage() {
     const { selectedTemplate, setSelectedTemplate } = useTemplateStore()
     const parsedResume = useFileStore(s => s.parsedResume)
     const storeSetResumeFile = useFileStore(s => s.setResumeFile)
-    const performMockParsing = useFileStore(s => s.performMockParsing)
+    const performParsing = useFileStore(s => s.performParsing)
     const generateSuggestions = useFileStore(s => s.generateSuggestions)
-    const createInstance = useFileStore(s => s.createInstance)
+    const createProject = useFileStore(s => s.createProject)
 
     const [currentStep, setCurrentStep] = useState(() => selectedTemplate ? 2 : 1)
     const [isProcessing, setIsProcessing] = useState(false)
@@ -44,7 +44,7 @@ export default function CreatePortfolioPage() {
         try {
             // STEP 2 & 3: Upload and Parse
             await storeSetResumeFile(file)
-            await performMockParsing()
+            await performParsing()
             
             setIsProcessing(false)
             setCurrentStep(3)
@@ -61,10 +61,9 @@ export default function CreatePortfolioPage() {
 
         try {
             // STEP 3.5: Initialize Instance with Template Files
-            createInstance(
+            await createProject(
                 selectedTemplate.id, 
-                selectedTemplate.name, 
-                selectedTemplate.files as any
+                selectedTemplate.name
             )
 
             // STEP 4: Information Matching (Generate Recommendations)

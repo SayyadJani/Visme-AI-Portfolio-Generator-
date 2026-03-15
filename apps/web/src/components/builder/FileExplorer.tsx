@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useEffect, memo } from "react"
 import { useFileStore } from "./fileStore"
 import { FileCode2, FolderOpen, Folder, ChevronRight, ChevronDown, Search, Plus, MoreVertical, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -56,7 +56,7 @@ function buildTree(paths: string[]): TreeNode[] {
 
 // ─── Tree rendering ──────────────────────────────────────────────────────────
 
-function FileItem({
+const FileItem = memo(({
     node,
     depth,
     activeFile,
@@ -68,7 +68,7 @@ function FileItem({
     activeFile: string
     onSelect: (path: string) => void
     onDelete: (path: string) => void
-}) {
+}) => {
     const [isOpen, setIsOpen] = useState(true)
 
     if (node.kind === "dir") {
@@ -151,11 +151,12 @@ function FileItem({
             </button>
         </div>
     )
-}
+})
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function FileExplorer() {
+    const projects = useFileStore(s => s.projects)
     const instances = useFileStore(s => s.instances)
     const currentInstanceId = useFileStore(s => s.currentInstanceId)
     const projectFiles = useFileStore(s => s.projectFiles)
@@ -164,13 +165,27 @@ export default function FileExplorer() {
     const addFile = useFileStore(s => s.addFile)
     const removeFile = useFileStore(s => s.removeFile)
     const setCurrentInstance = useFileStore(s => s.setCurrentInstance)
+    const loadProjects = useFileStore(s => s.loadProjects)
     const [isCreating, setIsCreating] = useState(false)
     const [newFileName, setNewFileName] = useState("")
     const [filter, setFilter] = useState("")
     const [showInstanceSwitcher, setShowInstanceSwitcher] = useState(false)
 
-    const currentInstance = currentInstanceId ? instances[currentInstanceId] : null
+    // Load projects on mount
+    useEffect(() => {
+        loadProjects()
+    }, [])
+
+    const currentInstance = currentInstanceId ? (projects.find(p => String(p.id) === currentInstanceId) || instances[currentInstanceId]) : null
     const paths = Object.keys(projectFiles)
+
+    // Re-initialize if currentInstanceId is set but files are missing
+    useEffect(() => {
+        if (currentInstanceId && paths.length === 0) {
+            console.log("[FileExplorer] Files missing on mount, triggering load...")
+            setCurrentInstance(currentInstanceId)
+        }
+    }, [currentInstanceId])
 
     const filteredPaths = useMemo(() => {
         if (!filter) return paths
@@ -218,7 +233,24 @@ export default function FileExplorer() {
                             exit={{ height: 0, opacity: 0 }}
                             className="mt-2 space-y-1 overflow-hidden"
                         >
-                            {Object.values(instances).map((inst) => (
+                            {projects.map((proj) => (
+                                <button
+                                    key={proj.id}
+                                    onClick={() => {
+                                        setCurrentInstance(String(proj.id))
+                                        setShowInstanceSwitcher(false)
+                                    }}
+                                    className={cn(
+                                        "w-full text-left px-2 py-1.5 rounded text-[10px] font-bold transition-colors",
+                                        String(proj.id) === currentInstanceId
+                                            ? "bg-indigo-500/10 text-indigo-400"
+                                            : "text-muted-foreground hover:bg-[#1c1c22] hover:text-foreground"
+                                    )}
+                                >
+                                    {proj.name}
+                                </button>
+                            ))}
+                            {projects.length === 0 && Object.values(instances).map((inst) => (
                                 <button
                                     key={inst.instanceId}
                                     onClick={() => {

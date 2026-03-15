@@ -2,9 +2,12 @@
 
 import { User, Mail } from "lucide-react"
 import { SettingsSection } from "./SettingsSection"
-import { userProfile } from "@/data/userProfile"
+import { useAuthStore } from "@/stores/authStore"
+import { userProfile as staticProfile } from "@/data/userProfile"
 
 export const PersonalDetailsSection = () => {
+    const { user } = useAuthStore()
+
     return (
         <SettingsSection
             title="Personal Details"
@@ -18,7 +21,7 @@ export const PersonalDetailsSection = () => {
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <input
                             type="text"
-                            defaultValue={userProfile.name}
+                            defaultValue={user?.name || staticProfile.name}
                             className="w-full bg-background border border-border rounded-2xl pl-12 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-border/80 transition-all font-medium"
                         />
                     </div>
@@ -29,7 +32,7 @@ export const PersonalDetailsSection = () => {
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <input
                             type="email"
-                            defaultValue={userProfile.email}
+                            defaultValue={user?.email || staticProfile.email}
                             className="w-full bg-background border border-border rounded-2xl pl-12 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-border/80 transition-all font-medium"
                         />
                     </div>

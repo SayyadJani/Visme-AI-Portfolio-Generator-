@@ -3,8 +3,11 @@
 import { motion } from "framer-motion"
 import { Zap, ShieldCheck, Palette, ArrowRight, RefreshCw } from "lucide-react"
 import { useTemplateStore } from "@/stores/templateStore"
-import { templates } from "@/data/templates/index"
+import { projectService } from "@/services/project.service"
+import { TemplateDTO } from "@repo/types"
+import { useState, useEffect, memo } from "react"
 import Link from "next/link"
+import Image from "next/image"
 
 const features = [
     { icon: Zap, title: "Fast Load", desc: "Optimized images and lightweight JS." },
@@ -18,17 +21,33 @@ interface TemplateSelectionStepProps {
 
 export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps) => {
     const { selectedTemplate, setSelectedTemplate } = useTemplateStore()
+    const [templates, setTemplates] = useState<TemplateDTO[]>([])
+    const [loading, setLoading] = useState(true)
 
-    // Default to the developer template if nothing is selected
+    useEffect(() => {
+        const fetchTemplates = async () => {
+            try {
+                const data = await projectService.getTemplates()
+                setTemplates(data)
+            } catch (err) {
+                console.error("Failed to fetch templates", err)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchTemplates()
+    }, [])
+
+    // Default to the first template if nothing is selected
     const fallback = templates[0]
-    const displayTemplate = selectedTemplate ?? fallback
+    const displayTemplate = selectedTemplate ?? (fallback ? { ...fallback, previewImage: fallback.thumbUrl || "/placeholder.png" } as any : null)
 
+    if (loading) return <div className="h-[400px] clay-surface animate-pulse" />
     if (!displayTemplate) return null
 
     const handleContinue = () => {
-        if (!selectedTemplate) {
-            // auto-select the default
-            setSelectedTemplate(templates[0] as any)
+        if (!selectedTemplate && fallback) {
+            setSelectedTemplate({ ...fallback, previewImage: fallback.thumbUrl || "/placeholder.png" } as any)
         }
         onContinue(displayTemplate.id)
     }
@@ -45,13 +64,16 @@ export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps
                 animate={{ opacity: 1, scale: 1 }}
                 className="clay-surface overflow-hidden group shadow-2xl relative"
             >
-                <div className="aspect-video overflow-hidden">
-                    <img
-                        src={displayTemplate.previewImage}
+                <div className="aspect-video overflow-hidden border-none cursor-default">
+                    <Image
+                        src={displayTemplate.previewImage || displayTemplate.thumbUrl || "/placeholder.png"}
                         alt={displayTemplate.name}
+                        width={1200}
+                        height={675}
                         className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                        priority
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
                 </div>
 
                 <div className="absolute bottom-10 left-10 space-y-4 pr-10">

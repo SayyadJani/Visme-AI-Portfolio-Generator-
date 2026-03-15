@@ -4,8 +4,10 @@ import { motion } from "framer-motion"
 import { Sparkles, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { tipOfTheWeek as tip } from "@/data/dashboard"
+import Image from "next/image"
+import React, { memo } from "react"
 
-export const TipCard = () => {
+export const TipCard = memo(() => {
     return (
         <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -48,9 +50,11 @@ export const TipCard = () => {
 
                 <div className="hidden lg:block w-80 aspect-square relative rounded-[2rem] overflow-hidden border border-border shadow-2xl p-4 bg-muted/20">
                     <div className="w-full h-full rounded-[1.5rem] overflow-hidden relative">
-                        <img
+                        <Image
                             src={tip.imageUrl}
                             alt="Tip illustration"
+                            width={320}
+                            height={320}
                             className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 ease-in-out scale-110 group-hover:scale-100"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-60" />
@@ -59,4 +63,4 @@ export const TipCard = () => {
             </div>
         </motion.div>
     )
-}
+})

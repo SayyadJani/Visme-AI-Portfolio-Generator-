@@ -4,16 +4,36 @@ import React, { useState } from "react"
 import { 
     PanelLeftClose, PanelLeftOpen, Terminal as TerminalIcon, X, 
     ChevronDown, ChevronUp, Trash2, Files, Search, 
-    Sparkles, Settings, Command, Activity
+    Sparkles, Settings, Command, Activity, Loader2
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import FileExplorer from "./FileExplorer"
-import CodeEditor from "./CodeEditor"
-import PreviewPanel from "./PreviewPanel"
+import dynamic from "next/dynamic"
 import { motion, AnimatePresence } from "framer-motion"
-import { SandpackConsole } from "@codesandbox/sandpack-react"
-import SandpackDiagnostics from "./SandpackDiagnostics"
-import SuggestionOverlay from "./SuggestionOverlay"
+
+const CodeEditor = dynamic(() => import("./CodeEditor"), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full w-full flex flex-col items-center justify-center bg-[#0b0b0e] border border-[#1c1c22]">
+            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Loading Editor...</p>
+        </div>
+    )
+})
+
+const PreviewPanel = dynamic(() => import("./PreviewPanel"), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full w-full flex flex-col items-center justify-center bg-[#0b0b0e]">
+            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Preparing Preview...</p>
+        </div>
+    )
+})
+
+const SuggestionOverlay = dynamic(() => import("./SuggestionOverlay"), {
+    ssr: false
+})
 
 export default function BuilderLayout() {
     const [explorerOpen, setExplorerOpen] = useState(true)
@@ -129,11 +149,20 @@ export default function BuilderLayout() {
                         </div>
 
                         {/* Actual Console Content */}
-                        <div className="flex-1 overflow-hidden bg-[#0b0b0e]">
-                            <SandpackConsole
-                                style={{ height: "100%" }}
-                                showHeader={false}
-                            />
+                        <div className="flex-1 overflow-hidden bg-[#0b0b0e] p-4 font-mono text-[11px] text-muted-foreground/60 leading-relaxed">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-indigo-500 font-bold">➜</span>
+                                <span className="text-foreground">System initialized.</span>
+                            </div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-indigo-500 font-bold">➜</span>
+                                <span>Preview runtime (Server 2) is active.</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-indigo-500 font-bold">➜</span>
+                                <span className="animate-pulse">_</span>
+                            </div>
+                            {/* Real-time terminal output from Server 2 will be piped here in future updates */}
                         </div>
                     </motion.div>
                 </div>
@@ -145,7 +174,6 @@ export default function BuilderLayout() {
             </div>
 
             {/* Activities & Sidebar Handlers handled inside subcomponents */}
-            <SandpackDiagnostics />
         </div>
     )
 }

@@ -3,8 +3,9 @@
 import { motion } from "framer-motion"
 import { Plus, Sparkles } from "lucide-react"
 import Link from "next/link"
+import React, { memo } from "react"
 
-export const CreatePortfolioCard = ({ delay = 0 }: { delay?: number }) => {
+export const CreatePortfolioCard = memo(({ delay = 0 }: { delay?: number }) => {
     return (
         <Link href="/dashboard/portfolios/create" className="block h-full">
             <motion.div
@@ -31,4 +32,4 @@ export const CreatePortfolioCard = ({ delay = 0 }: { delay?: number }) => {
             </motion.div>
         </Link>
     )
-}
+})

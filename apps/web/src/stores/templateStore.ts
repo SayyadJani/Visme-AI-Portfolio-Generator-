@@ -7,7 +7,7 @@ export interface Template {
     name: string;
     description: string;
     previewImage: string;
-    files: VirtualFileSystem | Record<string, string>;
+    files?: VirtualFileSystem | Record<string, string>;
     // Optional display metadata
     category?: string;
     tags?: string[];

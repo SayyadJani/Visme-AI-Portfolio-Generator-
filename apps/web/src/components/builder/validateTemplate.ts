@@ -103,7 +103,7 @@ export function validateTemplate(files: VirtualFileSystem): ValidationResult {
     // ─── Check 8: portfolioData.js uses named or default export ──────────────
     const dataFile = Object.keys(files).find(p => p.includes("portfolioData"))
     if (dataFile) {
-        const code = files[dataFile].code
+        const code = files[dataFile]?.code ?? ""
         if (!code.includes("export default") && !code.includes("export const")) {
             warnings.push(
                 `${dataFile} has no export statement. ` +

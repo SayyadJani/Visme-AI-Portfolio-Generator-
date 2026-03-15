@@ -3,6 +3,7 @@
 import React, { memo } from "react"
 import { motion } from "framer-motion"
 import { Bolt, Quote } from "lucide-react"
+import Image from "next/image"
 
 export const Testimonial = memo(() => {
     return (
@@ -33,10 +34,12 @@ export const Testimonial = memo(() => {
                     </h2>
 
                     <div className="flex items-center gap-5 p-2 pr-6 rounded-full bg-white/10 backdrop-blur-md border border-white/10 group-hover:bg-white/20 transition-all">
-                        <div className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden shadow-lg">
-                            <img
+                        <div className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden shadow-lg relative">
+                            <Image
                                 src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=256&h=256&auto=format&fit=crop"
                                 alt="Sarah Drasner"
+                                width={48}
+                                height={48}
                                 className="w-full h-full object-cover"
                                 loading="lazy"
                             />
