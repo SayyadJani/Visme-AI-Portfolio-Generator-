@@ -1,10 +1,4 @@
-/*****************************************************************
- * 🏗️ 95% ACCURATE HYBRID RESUME PARSER ARCHITECTURE
- * Layer 1: Layout Engine (Deterministic)
- * Layer 2: Structured Block Extraction (Deterministic)
- * Layer 3: micro-LLM Refinement (Controlled)
- * Layer 4: Post-Processor & Validation
- *****************************************************************/
+
 
 import { Ollama } from 'ollama';
 // pdfjs-dist legacy build works in Node.js
@@ -300,11 +294,11 @@ export async function parseResumeHybrid(buffer: Buffer): Promise<ParsedData> {
     const identity = extractProfileDeterministic(profileLines, links);
 
     const summaryLines = getSection(sections, 'SUMMARY', 'PROFILE', 'ABOUT', 'OBJECTIVE');
-    const skillLines  = getSection(sections, 'SKILL', 'COMPETENCIES', 'TECHNOLOGIES', 'STRENGTHS', 'TOOLS');
-    const expLines    = getSection(sections, 'EXPERIENCE', 'WORK', 'EMPLOYMENT', 'HISTORY', 'CAREER');
-    const eduLines    = getSection(sections, 'EDUCATION', 'ACADEMIC', 'QUALIFICATION');
-    const projLines   = getSection(sections, 'PROJECT');
-    const certLines   = getSection(sections, 'CERTIFICATION', 'AWARDS', 'CERTIFICATE', 'LICENSE');
+    const skillLines = getSection(sections, 'SKILL', 'COMPETENCIES', 'TECHNOLOGIES', 'STRENGTHS', 'TOOLS');
+    const expLines = getSection(sections, 'EXPERIENCE', 'WORK', 'EMPLOYMENT', 'HISTORY', 'CAREER');
+    const eduLines = getSection(sections, 'EDUCATION', 'ACADEMIC', 'QUALIFICATION');
+    const projLines = getSection(sections, 'PROJECT');
+    const certLines = getSection(sections, 'CERTIFICATION', 'AWARDS', 'CERTIFICATE', 'LICENSE');
 
     const expBlocks = splitBlocks(expLines);
     const experiences: ParsedExperience[] = [];

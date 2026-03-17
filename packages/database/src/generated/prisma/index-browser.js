@@ -138,6 +138,7 @@ exports.Prisma.TemplateScalarFieldEnum = {
   domain: 'domain',
   gitRepoUrl: 'gitRepoUrl',
   thumbUrl: 'thumbUrl',
+  previews: 'previews',
   isActive: 'isActive',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

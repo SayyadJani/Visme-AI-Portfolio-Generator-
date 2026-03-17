@@ -2710,6 +2710,7 @@ export namespace Prisma {
     domain: number
     gitRepoUrl: number
     thumbUrl: number
+    previews: number
     isActive: number
     createdAt: number
     updatedAt: number
@@ -2752,6 +2753,7 @@ export namespace Prisma {
     domain?: true
     gitRepoUrl?: true
     thumbUrl?: true
+    previews?: true
     isActive?: true
     createdAt?: true
     updatedAt?: true
@@ -2839,6 +2841,7 @@ export namespace Prisma {
     domain: string
     gitRepoUrl: string
     thumbUrl: string | null
+    previews: string[]
     isActive: boolean
     createdAt: Date
     updatedAt: Date
@@ -2870,6 +2873,7 @@ export namespace Prisma {
     domain?: boolean
     gitRepoUrl?: boolean
     thumbUrl?: boolean
+    previews?: boolean
     isActive?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2886,6 +2890,7 @@ export namespace Prisma {
     domain?: boolean
     gitRepoUrl?: boolean
     thumbUrl?: boolean
+    previews?: boolean
     isActive?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2900,6 +2905,7 @@ export namespace Prisma {
     domain?: boolean
     gitRepoUrl?: boolean
     thumbUrl?: boolean
+    previews?: boolean
     isActive?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2914,12 +2920,13 @@ export namespace Prisma {
     domain?: boolean
     gitRepoUrl?: boolean
     thumbUrl?: boolean
+    previews?: boolean
     isActive?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type TemplateOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "slug" | "description" | "techStack" | "domain" | "gitRepoUrl" | "thumbUrl" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["template"]>
+  export type TemplateOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "slug" | "description" | "techStack" | "domain" | "gitRepoUrl" | "thumbUrl" | "previews" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["template"]>
   export type TemplateInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     projects?: boolean | Template$projectsArgs<ExtArgs>
     _count?: boolean | TemplateCountOutputTypeDefaultArgs<ExtArgs>
@@ -2941,6 +2948,7 @@ export namespace Prisma {
       domain: string
       gitRepoUrl: string
       thumbUrl: string | null
+      previews: string[]
       isActive: boolean
       createdAt: Date
       updatedAt: Date
@@ -3376,6 +3384,7 @@ export namespace Prisma {
     readonly domain: FieldRef<"Template", 'String'>
     readonly gitRepoUrl: FieldRef<"Template", 'String'>
     readonly thumbUrl: FieldRef<"Template", 'String'>
+    readonly previews: FieldRef<"Template", 'String[]'>
     readonly isActive: FieldRef<"Template", 'Boolean'>
     readonly createdAt: FieldRef<"Template", 'DateTime'>
     readonly updatedAt: FieldRef<"Template", 'DateTime'>
@@ -8487,6 +8496,7 @@ export namespace Prisma {
     domain: 'domain',
     gitRepoUrl: 'gitRepoUrl',
     thumbUrl: 'thumbUrl',
+    previews: 'previews',
     isActive: 'isActive',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -8798,6 +8808,7 @@ export namespace Prisma {
     domain?: StringFilter<"Template"> | string
     gitRepoUrl?: StringFilter<"Template"> | string
     thumbUrl?: StringNullableFilter<"Template"> | string | null
+    previews?: StringNullableListFilter<"Template">
     isActive?: BoolFilter<"Template"> | boolean
     createdAt?: DateTimeFilter<"Template"> | Date | string
     updatedAt?: DateTimeFilter<"Template"> | Date | string
@@ -8813,6 +8824,7 @@ export namespace Prisma {
     domain?: SortOrder
     gitRepoUrl?: SortOrder
     thumbUrl?: SortOrderInput | SortOrder
+    previews?: SortOrder
     isActive?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -8831,6 +8843,7 @@ export namespace Prisma {
     domain?: StringFilter<"Template"> | string
     gitRepoUrl?: StringFilter<"Template"> | string
     thumbUrl?: StringNullableFilter<"Template"> | string | null
+    previews?: StringNullableListFilter<"Template">
     isActive?: BoolFilter<"Template"> | boolean
     createdAt?: DateTimeFilter<"Template"> | Date | string
     updatedAt?: DateTimeFilter<"Template"> | Date | string
@@ -8846,6 +8859,7 @@ export namespace Prisma {
     domain?: SortOrder
     gitRepoUrl?: SortOrder
     thumbUrl?: SortOrderInput | SortOrder
+    previews?: SortOrder
     isActive?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -8866,6 +8880,7 @@ export namespace Prisma {
     domain?: StringWithAggregatesFilter<"Template"> | string
     gitRepoUrl?: StringWithAggregatesFilter<"Template"> | string
     thumbUrl?: StringNullableWithAggregatesFilter<"Template"> | string | null
+    previews?: StringNullableListFilter<"Template">
     isActive?: BoolWithAggregatesFilter<"Template"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"Template"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Template"> | Date | string
@@ -9252,6 +9267,7 @@ export namespace Prisma {
     domain: string
     gitRepoUrl: string
     thumbUrl?: string | null
+    previews?: TemplateCreatepreviewsInput | string[]
     isActive?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -9267,6 +9283,7 @@ export namespace Prisma {
     domain: string
     gitRepoUrl: string
     thumbUrl?: string | null
+    previews?: TemplateCreatepreviewsInput | string[]
     isActive?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -9282,6 +9299,7 @@ export namespace Prisma {
     domain?: StringFieldUpdateOperationsInput | string
     gitRepoUrl?: StringFieldUpdateOperationsInput | string
     thumbUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    previews?: TemplateUpdatepreviewsInput | string[]
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -9297,6 +9315,7 @@ export namespace Prisma {
     domain?: StringFieldUpdateOperationsInput | string
     gitRepoUrl?: StringFieldUpdateOperationsInput | string
     thumbUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    previews?: TemplateUpdatepreviewsInput | string[]
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -9312,6 +9331,7 @@ export namespace Prisma {
     domain: string
     gitRepoUrl: string
     thumbUrl?: string | null
+    previews?: TemplateCreatepreviewsInput | string[]
     isActive?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -9326,6 +9346,7 @@ export namespace Prisma {
     domain?: StringFieldUpdateOperationsInput | string
     gitRepoUrl?: StringFieldUpdateOperationsInput | string
     thumbUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    previews?: TemplateUpdatepreviewsInput | string[]
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -9340,6 +9361,7 @@ export namespace Prisma {
     domain?: StringFieldUpdateOperationsInput | string
     gitRepoUrl?: StringFieldUpdateOperationsInput | string
     thumbUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    previews?: TemplateUpdatepreviewsInput | string[]
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -9835,6 +9857,7 @@ export namespace Prisma {
     domain?: SortOrder
     gitRepoUrl?: SortOrder
     thumbUrl?: SortOrder
+    previews?: SortOrder
     isActive?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -10362,6 +10385,10 @@ export namespace Prisma {
     set: string[]
   }
 
+  export type TemplateCreatepreviewsInput = {
+    set: string[]
+  }
+
   export type ProjectCreateNestedManyWithoutTemplateInput = {
     create?: XOR<ProjectCreateWithoutTemplateInput, ProjectUncheckedCreateWithoutTemplateInput> | ProjectCreateWithoutTemplateInput[] | ProjectUncheckedCreateWithoutTemplateInput[]
     connectOrCreate?: ProjectCreateOrConnectWithoutTemplateInput | ProjectCreateOrConnectWithoutTemplateInput[]
@@ -10383,6 +10410,11 @@ export namespace Prisma {
 
   export type NullableStringFieldUpdateOperationsInput = {
     set?: string | null
+  }
+
+  export type TemplateUpdatepreviewsInput = {
+    set?: string[]
+    push?: string | string[]
   }
 
   export type BoolFieldUpdateOperationsInput = {
@@ -11120,6 +11152,7 @@ export namespace Prisma {
     domain: string
     gitRepoUrl: string
     thumbUrl?: string | null
+    previews?: TemplateCreatepreviewsInput | string[]
     isActive?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -11134,6 +11167,7 @@ export namespace Prisma {
     domain: string
     gitRepoUrl: string
     thumbUrl?: string | null
+    previews?: TemplateCreatepreviewsInput | string[]
     isActive?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -11254,6 +11288,7 @@ export namespace Prisma {
     domain?: StringFieldUpdateOperationsInput | string
     gitRepoUrl?: StringFieldUpdateOperationsInput | string
     thumbUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    previews?: TemplateUpdatepreviewsInput | string[]
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11268,6 +11303,7 @@ export namespace Prisma {
     domain?: StringFieldUpdateOperationsInput | string
     gitRepoUrl?: StringFieldUpdateOperationsInput | string
     thumbUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    previews?: TemplateUpdatepreviewsInput | string[]
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string

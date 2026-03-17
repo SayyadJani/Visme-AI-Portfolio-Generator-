@@ -32,6 +32,7 @@ interface FileStoreState {
     isPreviewLoading: boolean
     isSaving: boolean
     previewRefreshKey: number
+    previewError: string | null
     loadProjects: () => Promise<void>
     startPreview: () => Promise<void>
     stopPreview: () => Promise<void>
@@ -74,10 +75,11 @@ export const useFileStore = create<FileStoreState>()(
             resumeText: null,
             parsedResume: null,
             suggestedChanges: null,
-            previewUrl: null,
-            isPreviewLoading: false,
-            isSaving: false,
-            previewRefreshKey: 0,
+        previewUrl: null,
+        isPreviewLoading: false,
+        isSaving: false,
+        previewRefreshKey: 0,
+        previewError: null,
 
             // ─────────────────────────────────────────────────────────────────
             setResumeFile: (file) => set({ resumeFile: file }),
@@ -139,32 +141,49 @@ export const useFileStore = create<FileStoreState>()(
 
             startPreview: async () => {
                 const { currentInstanceId } = get()
-                if (!currentInstanceId) return
+                if (!currentInstanceId) {
+                    console.warn("[fileStore] startPreview called but currentInstanceId is null")
+                    return
+                }
 
-                set({ isPreviewLoading: true })
+                console.log(`[fileStore] 🚀 Starting preview for instance ${currentInstanceId}...`)
+                set({ isPreviewLoading: true, previewError: null })
                 try {
                     await previewService.startPreview(Number(currentInstanceId))
+                    console.log(`[fileStore] ✅ Preview requested successfully. Polling for status...`)
                     
                     // Poll for status until active and previewUrl is present
                     let attempts = 0
-                    const maxAttempts = 15
+                    const maxAttempts = 30 // Increased for slower installs
                     const poll = async () => {
                         if (attempts >= maxAttempts) {
-                            set({ isPreviewLoading: false })
+                            const errorMsg = `Preview timeout: Dev server did not start after ${maxAttempts * 2}s. Check server logs.`
+                            console.error(`[fileStore] ❌ ${errorMsg}`)
+                            set({ isPreviewLoading: false, previewError: errorMsg })
                             return
                         }
                         attempts++
-                        const status = await previewService.getStatus(Number(currentInstanceId))
-                        if (status.isActive && status.previewUrl) {
-                            set({ previewUrl: status.previewUrl, isPreviewLoading: false })
-                        } else {
-                            setTimeout(poll, 2000)
+                        console.log(`[fileStore] ⏳ Polling attempt ${attempts}/${maxAttempts}...`)
+                        try {
+                            const status = await previewService.getStatus(Number(currentInstanceId))
+                            console.log(`[fileStore] 📊 Status received:`, status)
+                            if (status.isActive && status.previewUrl) {
+                                console.log(`[fileStore] 🎉 Preview is ACTIVE! URL: ${status.previewUrl}`)
+                                set({ previewUrl: status.previewUrl, isPreviewLoading: false, previewError: null })
+                            } else {
+                                console.log(`[fileStore] 🔄 Status not fully ready yet, polling again in 2s...`)
+                                setTimeout(poll, 2000)
+                            }
+                        } catch (pollError) {
+                            console.error(`[fileStore] ⚠️ Error during polling:`, pollError)
+                            setTimeout(poll, 2000) // Continue polling even on error
                         }
                     }
                     poll()
-                } catch (error) {
-                    console.error("START_PREVIEW_ERROR:", error)
-                    set({ isPreviewLoading: false })
+                } catch (error: any) {
+                    const message = error.response?.data?.message || error.message || "Failed to start preview"
+                    console.error("[fileStore] 🛑 START_PREVIEW_ERROR:", message)
+                    set({ isPreviewLoading: false, previewError: message })
                 }
             },
 

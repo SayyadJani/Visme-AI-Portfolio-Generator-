@@ -10,6 +10,8 @@ import {
   listSnapshots,
   restoreSnapshot,
   createSnapshot,
+  deleteProject,
+  getDiskStatus,
 } from '../services/project.service';
 import { prisma } from '@repo/database';
 import { sendSuccess, NotFoundError, ValidationError } from '@repo/shared-utils';
@@ -143,6 +145,25 @@ export class ProjectController {
 
       const result = await restoreSnapshot(projectId, Number(req.user!.userId), snapshotId);
       sendSuccess(res, result);
+    } catch (err) { next(err); }
+  };
+
+  // DELETE /api/projects/:id
+  static delete = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      if (isNaN(projectId)) return next(new ValidationError({ id: ['Invalid project ID'] }));
+
+      await deleteProject(projectId, Number(req.user!.userId));
+      sendSuccess(res, { deleted: true });
+    } catch (err) { next(err); }
+  };
+
+  // GET /api/projects/storage-status
+  static getStorageStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const status = await getDiskStatus();
+      sendSuccess(res, status);
     } catch (err) { next(err); }
   };
 }

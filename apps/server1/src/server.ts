@@ -13,6 +13,7 @@ import { adminRoutes } from './routes/admin.routes';
 import { errorHandler } from './middleware/errorHandler.middleware';
 import { RedisService } from './services/redis.service';
 import { startDeployWorker } from './jobs/deploy.worker';
+import { startDiskCleanupWorker } from './jobs/cleanup.worker';
 
 // Now import database after env is loaded via 'dotenv/config'
 import { prisma } from '@repo/database';
@@ -23,6 +24,7 @@ const env = parseEnv(server1EnvSchema);
 // Initialize background services
 // RedisService now initializes on import
 startDeployWorker();
+startDiskCleanupWorker();
 
 const app = express();
 

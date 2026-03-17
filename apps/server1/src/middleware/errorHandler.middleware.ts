@@ -24,6 +24,12 @@ export const errorHandler = (
     return sendError(res, 400, `File upload error: ${err.message}`, 'BAD_REQUEST');
   }
 
+  // Handle Disk Space errors (ENOSPC)
+  if ((err as any).code === 'ENOSPC') {
+    logger.error('CRITICAL: Disk full', err);
+    return sendError(res, 507, 'Server storage is completely full. Cannot save files.', 'DISK_FULL');
+  }
+
   logger.error('Unhandled error', err);
   return sendError(res, 500, 'Internal server error', 'INTERNAL_ERROR');
 };

@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as fs from 'fs';
 import { RedisService } from './redis.service';
 import { prisma } from '@repo/database';
-import { NotFoundError, ForbiddenError, logger } from '@repo/shared-utils';
+import { NotFoundError, ForbiddenError, AppError, logger } from '@repo/shared-utils';
 import type { AssignRuntimeResponse } from '@repo/types';
 
 const STARTUP_TIMEOUT_MS = 300_000;
@@ -59,7 +59,7 @@ export class PreviewService {
       // Also write to a file I can read
       fs.appendFileSync('preview_error.log', `[${new Date().toISOString()}] ${JSON.stringify(fullError)}\n`);
 
-      throw new Error(`Preview runtime assignment failed: ${server2Error}`);
+      throw new AppError(500, `Preview runtime assignment failed: ${server2Error}`, 'RUNTIME_START_FAILED');
     }
   }
 

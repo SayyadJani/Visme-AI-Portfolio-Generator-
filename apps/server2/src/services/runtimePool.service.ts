@@ -114,11 +114,7 @@ export class RuntimePoolService {
 
     // Kill Vite process
     if (rt.pid) {
-      try { 
-        process.kill(rt.pid); 
-      } catch (err) { 
-        logger.warn(`Failed to kill process ${rt.pid} for project ${projectId}. It might have already exited.`);
-      }
+      RuntimeAgentService.kill(rt.pid);
     }
 
     // Reset entry

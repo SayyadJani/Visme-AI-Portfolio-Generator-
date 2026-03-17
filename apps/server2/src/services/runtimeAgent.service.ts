@@ -25,23 +25,43 @@ export class RuntimeAgentService {
         );
 
         try {
+          const hasPnpmLock = fs.existsSync(path.join(instancePath, 'pnpm-lock.yaml'));
+          const pnpmCmd = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
           const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-          
-          execSync(`${npmCmd} install`, {
-            cwd:     instancePath,
-            timeout: 120_000,   // 2 min max for install itself
-            stdio:   'pipe',
-          });
+
+          // Use D: drive for all caches/stores
+          const baseDataPath = process.env.INSTANCES_PATH || 'data/instances';
+          const npmCachePath = path.join(baseDataPath, '..', 'npm-cache');
+          const pnpmStorePath = path.join(baseDataPath, '..', 'pnpm-store');
+
+          if (!fs.existsSync(npmCachePath)) fs.mkdirSync(npmCachePath, { recursive: true });
+          if (!fs.existsSync(pnpmStorePath)) fs.mkdirSync(pnpmStorePath, { recursive: true });
+
+          if (hasPnpmLock) {
+            logger.info(`pnpm-lock.yaml found - using pnpm with store at ${pnpmStorePath}`, undefined, 'runtime-agent');
+            execSync(`${pnpmCmd} install --store-dir "${pnpmStorePath}"`, {
+              cwd: instancePath,
+              timeout: 120_000,
+              stdio: 'pipe',
+            });
+          } else {
+            logger.info(`Using npm with cache at ${npmCachePath}`, undefined, 'runtime-agent');
+            execSync(`${npmCmd} install --legacy-peer-deps --cache "${npmCachePath}"`, {
+              cwd: instancePath,
+              timeout: 120_000,
+              stdio: 'pipe',
+            });
+          }
 
           logger.info(
-            `npm install completed for project at ${instancePath}`,
+            `Dependencies installed successfully at ${instancePath}`,
             undefined,
             'runtime-agent'
           );
 
         } catch (installErr) {
-          logger.error('npm install failed', installErr, 'runtime-agent');
-          return reject(new Error(`npm install failed: ${String(installErr)}`));
+          logger.error('Install failed', installErr, 'runtime-agent');
+          return reject(new Error(`Install failed: ${String(installErr)}`));
         }
 
       } else if (!fs.existsSync(pkgPath)) {
@@ -55,8 +75,10 @@ export class RuntimeAgentService {
       // ── Step 2: Start dev server or static server ───────────────────────
       const hasPackageJson = fs.existsSync(pkgPath);
       const hasIndexHtml = fs.existsSync(path.join(instancePath, 'index.html'));
+      const hasPnpmLock = fs.existsSync(path.join(instancePath, 'pnpm-lock.yaml'));
 
       const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+      const pnpmCmd = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
       const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
       let proc;
@@ -66,17 +88,19 @@ export class RuntimeAgentService {
         try {
           const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
           if (pkg.scripts) {
-             if (pkg.scripts.dev) scriptToRun = 'dev';
-             else if (pkg.scripts.start) scriptToRun = 'start';
+            if (pkg.scripts.dev) scriptToRun = 'dev';
+            else if (pkg.scripts.start) scriptToRun = 'start';
           }
-        } catch(e) {}
+        } catch (e) { }
+
+        const runnerCmd = hasPnpmLock ? pnpmCmd : npmCmd;
 
         proc = spawn(
-          npmCmd,
+          runnerCmd,
           ['run', scriptToRun, '--', '--port', port.toString()],
           {
-            cwd:   instancePath,
-            env:   { ...process.env, PORT: port.toString() },
+            cwd: instancePath,
+            env: { ...process.env, PORT: port.toString() },
             stdio: ['ignore', 'pipe', 'pipe'],
             shell: true // Important for Windows
           }
@@ -90,10 +114,10 @@ export class RuntimeAgentService {
         // Use http-server via npx
         proc = spawn(
           npxCmd,
-          ['-y', 'http-server', '.', '-p', port.toString()],
+          ['-y', 'http-server', '.', '-p', port.toString(), '-c-1'],
           {
-            cwd:   instancePath,
-            env:   { ...process.env, PORT: port.toString() },
+            cwd: instancePath,
+            env: { ...process.env, PORT: port.toString() },
             stdio: ['ignore', 'pipe', 'pipe'],
             shell: true
           }
@@ -103,20 +127,25 @@ export class RuntimeAgentService {
       }
 
       let output = '';
+      let isResolved = false;
 
       const checkReady = (data: Buffer) => {
+        if (isResolved) return;
+
         output += data.toString();
         const lowerOut = output.toLowerCase();
 
         // Support Vite, Parcel, and http-server readiness strings
         if (
-            lowerOut.includes('ready in') || 
-            lowerOut.includes('local:') ||
-            lowerOut.includes('built in') ||
-            lowerOut.includes('server running') ||
-            lowerOut.includes('available on:') ||
-            lowerOut.includes('hit ctrl-c to stop')
+          lowerOut.includes('ready in') ||
+          lowerOut.includes('local:') ||
+          lowerOut.includes('built in') ||
+          lowerOut.includes('server running') ||
+          lowerOut.includes('available on:') ||
+          lowerOut.includes('hit ctrl-c to stop') ||
+          lowerOut.includes('preview at')
         ) {
+          isResolved = true;
           clearTimeout(timeoutHandle);
           logger.info(
             `Server ready on port ${port} (pid ${proc.pid}) for ${instancePath}`,
@@ -130,31 +159,62 @@ export class RuntimeAgentService {
       proc.stdout?.on('data', checkReady);
 
       proc.stderr?.on('data', (data: Buffer) => {
-        checkReady(data);
+        if (!isResolved) checkReady(data);
         // Log stderr but don't fail — Vite/Parcel sometimes writes non-fatal info here
-        logger.warn(`Dev Server stderr on port ${port}`, data.toString(), 'runtime-agent');
+        logger.warn(`Dev Server [Port ${port}] stderr: ${data.toString()}`, undefined, 'runtime-agent');
       });
 
       proc.on('error', (err) => {
+        if (isResolved) return;
+        isResolved = true;
         clearTimeout(timeoutHandle);
         reject(err);
       });
 
       proc.on('exit', (code) => {
+        if (!isResolved) {
+          isResolved = true;
+          clearTimeout(timeoutHandle);
+          reject(new Error(`Dev Server exited prematurely with code ${code}`));
+        }
         if (code !== 0 && code !== null) {
           logger.error(`Dev Server exited with code ${code} on port ${port}`, undefined, 'runtime-agent');
         }
       });
 
       // Overall timeout covers both npm install + Dev Server startup
-      const STARTUP_TIMEOUT_MS = 180_000; // Increased to 3 mins to cover slow installs
       const timeoutHandle = setTimeout(() => {
-        proc.kill();
+        if (isResolved) return;
+        isResolved = true;
+
+        logger.warn(`Startup timed out for ${instancePath}. Killing process ${proc.pid}...`);
+        this.kill(proc.pid!);
+
         reject(new Error(
           `Startup timed out after ${STARTUP_TIMEOUT_MS}ms on port ${port}. ` +
           `Path: ${instancePath}`
         ));
       }, STARTUP_TIMEOUT_MS);
     });
+  }
+
+  /**
+   * Kills a process and all its children.
+   * On Windows, we need 'taskkill /T /F /PID' to ensure the whole process tree is gone.
+   * Without this, 'npm run dev' shell might die but the actual 'vite' or 'parcel' process stays alive.
+   */
+  static kill(pid: number): void {
+    try {
+      if (process.platform === 'win32') {
+        execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore' });
+      } else {
+        // Unix: kill the entire process group if we had set detached: true, 
+        // but here we just do a regular kill for the top level.
+        // For more robustness on Unix, we might need a similar group-kill approach.
+        process.kill(pid, 'SIGKILL');
+      }
+    } catch (err) {
+      // Ignore errors if process already exited
+    }
   }
 }

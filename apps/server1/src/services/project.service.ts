@@ -14,8 +14,9 @@ import type {
 import { RedisService } from './redis.service';
 import { NotFoundError, AppError } from '@repo/shared-utils';
 import { logger } from '@repo/shared-utils';
+import { checkDiskSpace } from '../utils/disk.util';
 
-const INSTANCES_ROOT = process.env.INSTANCES_PATH ?? '/data/instances';
+const INSTANCES_ROOT = path.resolve(process.env.INSTANCES_PATH ?? 'data/instances');
 
 // Folders to skip when building file tree or taking snapshots
 const SKIP_DIRS = new Set([
@@ -55,6 +56,66 @@ function toProjectDTO(project: any): ProjectDTO {
     createdAt:    project.createdAt,
     // diskPath intentionally excluded — never sent to client
   };
+}
+
+// ── HELPER: Build recursive file tree ─────────────────────────────────────────
+
+async function ensureProjectDiskState(project: any): Promise<void> {
+  // If we're waking it up from sleeping, mark it ready
+  if (project.status === 'SLEEPING') {
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { status: 'READY' }
+    }).catch(() => {});
+  }
+
+  if (fs.existsSync(project.diskPath)) return;
+
+  logger.info(`Disk path missing for project ${project.id}. Restoring from backup...`, undefined, 'project-service');
+  fs.mkdirSync(project.diskPath, { recursive: true });
+
+  const template = await prisma.template.findUnique({ where: { id: project.templateId } });
+  if (template) {
+    try {
+      execSync(`git clone --depth 1 --single-branch "${template.gitRepoUrl}" "${project.diskPath}"`, { stdio: 'pipe' });
+      const gitDir = path.join(project.diskPath, '.git');
+      if (fs.existsSync(gitDir)) fs.rmSync(gitDir, { recursive: true, force: true });
+    } catch (e) {
+      logger.error(`Failed to clone template for recovery of project ${project.id}`);
+    }
+  }
+
+  // Restore latest snapshot
+  const latestSnapshot = await prisma.projectSnapshot.findFirst({
+    where: { projectId: project.id },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  if (latestSnapshot && latestSnapshot.filesJson) {
+    const files = latestSnapshot.filesJson as Record<string, string>;
+    for (const [relPath, content] of Object.entries(files)) {
+      const fullPath = path.resolve(project.diskPath, relPath);
+      if (fullPath.startsWith(project.diskPath + path.sep) || fullPath === project.diskPath) {
+        fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+        fs.writeFileSync(fullPath, content, 'utf-8');
+      }
+    }
+    logger.info(`Restored snapshot ${latestSnapshot.id} for project ${project.id}`, undefined, 'project-service');
+  } else {
+    // Try redis
+    const cached = await RedisService.getCachedFiles(project.id);
+    if (cached) {
+      const files = JSON.parse(cached) as Record<string, string>;
+      for (const [relPath, content] of Object.entries(files)) {
+        const fullPath = path.resolve(project.diskPath, relPath);
+        if (fullPath.startsWith(project.diskPath + path.sep) || fullPath === project.diskPath) {
+          fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+          fs.writeFileSync(fullPath, content as string, 'utf-8');
+        }
+      }
+      logger.info(`Restored from Redis cache for project ${project.id}`, undefined, 'project-service');
+    }
+  }
 }
 
 // ── HELPER: Build recursive file tree ─────────────────────────────────────────
@@ -246,8 +307,11 @@ export async function getFileTree(
   if (project.status === 'ERROR') {
     throw new AppError(409, 'Project setup failed', 'PROJECT_ERROR');
   }
+
+  await ensureProjectDiskState(project);
+
   if (!fs.existsSync(project.diskPath)) {
-    throw new AppError(500, 'Project files not found on disk', 'DISK_MISSING');
+    throw new AppError(500, 'Project files could not be restored on disk', 'DISK_MISSING');
   }
 
   const tree = buildFileTree(project.diskPath, project.diskPath);
@@ -281,6 +345,8 @@ export async function getFullVfsCached(
     logger.info(`Project ${projectId} VFS served from Redis`, undefined, 'project-service');
     return { projectId, files: JSON.parse(cached) };
   }
+
+  await ensureProjectDiskState(project);
 
   // 2. Fallback to Disk read
   const files: Record<string, string> = {};
@@ -328,6 +394,8 @@ export async function getFileContent(
     throw new AppError(409, 'Project is not ready', 'PROJECT_NOT_READY');
   }
 
+  await ensureProjectDiskState(project);
+
   const fullPath = assertSafePath(project.diskPath, filePath);
 
   if (!fs.existsSync(fullPath)) throw new NotFoundError(`File ${filePath}`);
@@ -359,6 +427,8 @@ export async function saveFileContent(
   if (project.status !== 'READY' && project.status !== 'SLEEPING') {
     throw new AppError(409, 'Project is not ready for editing', 'PROJECT_NOT_READY');
   }
+
+  await ensureProjectDiskState(project);
 
   const fullPath = assertSafePath(project.diskPath, filePath);
 
@@ -500,4 +570,52 @@ export async function listUserProjects(userId: number): Promise<ProjectDTO[]> {
     orderBy: { lastOpenedAt: { sort: 'desc', nulls: 'last' } },
   });
   return projects.map(toProjectDTO);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// 7. deleteProject()
+// DELETE /api/projects/:id
+// ════════════════════════════════════════════════════════════════════════════════
+
+export async function deleteProject(projectId: number, userId: number): Promise<void> {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, userId },
+  });
+  if (!project) throw new NotFoundError('Project');
+
+  // 1. Delete from database (Prisma handles cascading if configured, or we delete secondary records manually)
+  // delete snapshots first
+  await prisma.projectSnapshot.deleteMany({ where: { projectId } });
+  
+  // delete deployment histories if any
+  // @ts-ignore - assuming Deployment exists based on context
+  await prisma.deployment?.deleteMany({ where: { projectId } });
+
+  await prisma.project.delete({ where: { id: projectId } });
+
+  // 2. Delete files from disk
+  if (project.diskPath && fs.existsSync(project.diskPath)) {
+    try {
+      fs.rmSync(project.diskPath, { recursive: true, force: true });
+      logger.info(`Deleted project files: ${project.diskPath}`, undefined, 'project-service');
+    } catch (err) {
+      logger.error(`Failed to delete project files for ${projectId}`, err, 'project-service');
+    }
+  }
+
+  // 3. Clear Redis cache
+  await RedisService.invalidateFileCache(projectId);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// 8. getDiskStatus()
+// ════════════════════════════════════════════════════════════════════════════════
+
+export async function getDiskStatus() {
+  const status = await checkDiskSpace(INSTANCES_ROOT);
+  return {
+    ...status,
+    path: INSTANCES_ROOT,
+    isFull: status.free < 100 * 1024 * 1024, // Less than 100MB free
+  };
 }

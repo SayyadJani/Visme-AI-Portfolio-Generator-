@@ -177,27 +177,39 @@ export default function Builder() {
         if (urlProjectId && urlProjectId !== currentInstanceId) {
             console.log("[Builder] URL sensed project:", urlProjectId)
             setCurrentInstance(urlProjectId)
-            return
         }
+    }, [urlProjectId, currentInstanceId, setCurrentInstance])
 
+    useEffect(() => {
         if (!currentInstanceId) return
 
-        // 2. Persistence recovery (Redis-backed)
-        // If we have an ID but no data, fetch everything.
-        // This is triggered by setCurrentInstance above, or a refresh.
-        if (!currentInstance || !hasFiles) {
-            console.log("[Builder] 🔄 Persistence recovery: Fetching instance data for", currentInstanceId)
-            setCurrentInstance(currentInstanceId)
-        } else {
-            // Data is here, start the preview
-            startPreview()
+        let mounted = true;
+
+        const init = async () => {
+            const state = useFileStore.getState()
+            const currentInst = state.instances[currentInstanceId]
+            const hasProjectFiles = Object.keys(state.projectFiles).length > 0
+
+            // 2. Persistence recovery (Redis-backed)
+            if (!currentInst || !hasProjectFiles) {
+                console.log("[Builder] 🔄 Persistence recovery: Fetching instance data for", currentInstanceId)
+                await setCurrentInstance(currentInstanceId)
+            }
+            
+            if (mounted) {
+                // Data is here, start the preview
+                startPreview()
+            }
         }
+        
+        init()
         
         // CLEANUP: Stop preview on unmount to free up Server 2 pool
         return () => {
+            mounted = false
             stopPreview()
         }
-    }, [currentInstanceId, currentInstance, hasFiles, startPreview, stopPreview, setCurrentInstance])
+    }, [currentInstanceId, setCurrentInstance, startPreview, stopPreview])
 
     if (!currentInstanceId) {
         return (

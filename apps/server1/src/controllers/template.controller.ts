@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createTemplateSchema } from '@repo/validation';
-import { createTemplate } from '../services/template.service';
+import { createTemplate, deleteTemplate } from '../services/template.service';
 import { sendSuccess, ValidationError } from '@repo/shared-utils';
 
 export class TemplateController {
@@ -22,6 +22,7 @@ export class TemplateController {
       // Check for files
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       const thumbFile = files?.thumbFile?.[0];
+      const previewFiles = files?.previewFiles || [];
 
       const { name, description, techStack, domain, gitRepoUrl } = parseResult.data;
 
@@ -32,9 +33,23 @@ export class TemplateController {
         domain,
         gitRepoUrl,
         thumbFilePath: thumbFile?.path,
+        previewFilePaths: previewFiles.map(f => f.path),
       });
 
       sendSuccess(res, { template }, 201);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * DELETE /api/admin/templates/:id
+   */
+  static remove = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      await deleteTemplate(id);
+      sendSuccess(res, { message: 'Template deleted successfully' });
     } catch (err) {
       next(err);
     }

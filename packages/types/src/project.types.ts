@@ -6,6 +6,7 @@ export interface TemplateDTO {
   techStack: string[];
   domain: string;
   thumbUrl: string | null;
+  previews: string[];
   isActive: boolean;
   gitRepoUrl: string;
   createdAt: Date;

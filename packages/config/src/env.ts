@@ -24,6 +24,7 @@ export const server1EnvSchema = z.object({
   CLOUDINARY_API_KEY: z.string().min(1),
   CLOUDINARY_API_SECRET: z.string().min(1),
   ADMIN_API_KEY: z.string().min(8),
+  TEMP_UPLOAD_PATH: z.string().optional(),
 });
  
 // Server2 environment schema

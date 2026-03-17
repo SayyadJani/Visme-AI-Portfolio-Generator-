@@ -15,9 +15,23 @@ export const templateService = {
       '/admin/templates/upload',
       formData,
       {
-        headers,
+        headers: {
+          ...headers,
+          'Content-Type': 'multipart/form-data',
+        },
       }
     );
     return response.data;
+  },
+
+  /**
+   * Delete a template (Admin)
+   */
+  deleteTemplate: async (id: string, adminKey: string): Promise<void> => {
+    await apiClient.delete(`/admin/templates/${id}`, {
+      headers: {
+        'x-admin-key': adminKey,
+      },
+    });
   },
 };

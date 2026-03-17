@@ -89,4 +89,24 @@ export const projectService = {
     const response = await apiClient.post(`/projects/${projectId}/snapshots/${snapshotId}/restore`);
     return response.data;
   },
+  
+  /**
+   * Delete a project
+   */
+  deleteProject: async (projectId: number): Promise<void> => {
+    await apiClient.delete(`/projects/${projectId}`);
+  },
+
+  /**
+   * Check system storage status
+   */
+  getStorageStatus: async (): Promise<{ free: number; total: number; used: number; path: string; isFull: boolean } | null> => {
+    try {
+      const response = await apiClient.get('/projects/health/storage');
+      return response.data;
+    } catch (err) {
+      console.warn("Storage status check failed (Network/Disk Error)", err);
+      return null;
+    }
+  },
 };

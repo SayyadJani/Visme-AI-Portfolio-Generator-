@@ -58,11 +58,12 @@ export function ClientProjectGrid() {
                         id={item.id}
                         title={item.name}
                         template={item.templateId}
-                        status={item.status === 'READY' ? "Live" : "Draft"}
+                        status={(item.status === 'READY' || item.status === 'SLEEPING') ? "Live" : "Draft"}
                         lastEdited={item.lastSavedAt ? new Date(item.lastSavedAt).toLocaleDateString() : "Never"}
                         views={0}
                         imageUrl={undefined}
                         delay={0.1 + i * 0.1} 
+                        onDelete={(deletedId) => setProjects(prev => prev.filter(p => p.id !== deletedId))}
                     />
                 ))}
                 <CreatePortfolioCard delay={0.4} />

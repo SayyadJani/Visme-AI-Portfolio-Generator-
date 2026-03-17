@@ -13,4 +13,9 @@ router.post(
   TemplateController.upload
 );
 
+router.delete(
+  '/templates/:id',
+  TemplateController.remove
+);
+
 export { router as adminRoutes };

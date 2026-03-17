@@ -9,6 +9,8 @@ export default function PreviewPanel() {
     const previewUrl = useFileStore(s => s.previewUrl)
     const isPreviewLoading = useFileStore(s => s.isPreviewLoading)
     const previewRefreshKey = useFileStore(s => s.previewRefreshKey)
+    const previewError = useFileStore(s => s.previewError)
+    const startPreview = useFileStore(s => s.startPreview)
     const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop")
     const [isFullscreen, setIsFullscreen] = useState(false)
     const panelRef = useRef<HTMLDivElement>(null)
@@ -16,13 +18,19 @@ export default function PreviewPanel() {
 
     // Automatically Refresh Iframe on Save
     useEffect(() => {
-        if (previewRefreshKey > 0 && iframeRef.current) {
+        if (previewRefreshKey > 0 && iframeRef.current && previewUrl) {
             console.log("[PreviewPanel] 🔄 Change detected, refreshing iframe...")
-            iframeRef.current.src = iframeRef.current.src
+            const url = new URL(previewUrl)
+            url.searchParams.set("t", Date.now().toString())
+            iframeRef.current.src = url.toString()
         }
-    }, [previewRefreshKey])
+    }, [previewRefreshKey, previewUrl])
 
     const handleRefresh = () => {
+        if (previewError) {
+            startPreview()
+            return
+        }
         if (iframeRef.current) {
             iframeRef.current.src = iframeRef.current.src
         }
@@ -128,7 +136,7 @@ export default function PreviewPanel() {
                     </div>
                 )}
 
-                {!previewUrl && !isPreviewLoading && (
+                {!previewUrl && !isPreviewLoading && !previewError && (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
                         <div className="w-16 h-16 rounded-full bg-[#1c1c22] flex items-center justify-center mb-4">
                             <Monitor className="w-8 h-8 text-muted-foreground/20" />
@@ -137,9 +145,27 @@ export default function PreviewPanel() {
                     </div>
                 )}
 
+                {previewError && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center">
+                        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                            <Monitor className="w-8 h-8 text-red-500/40" />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400 mb-2">Startup Failed</p>
+                        <p className="max-w-xs text-[11px] text-muted-foreground bg-[#1c1c22] p-3 rounded border border-red-500/20 font-mono break-words">
+                            {previewError}
+                        </p>
+                        <button 
+                            onClick={() => startPreview()}
+                            className="mt-6 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all"
+                        >
+                            Retry Preview
+                        </button>
+                    </div>
+                )}
+
                 {previewUrl && (
                     <div 
-                        className="bg-white shadow-2xl transition-all duration-300 ease-in-out h-full"
+                        className="bg-white shadow-2xl transition-all duration-300 ease-in-out h-full w-full"
                         style={{ 
                             width: viewport === "desktop" ? "100%" : viewport === "tablet" ? "768px" : "375px",
                             maxHeight: "100%",
@@ -148,6 +174,7 @@ export default function PreviewPanel() {
                         }}
                     >
                         <iframe
+                            key={previewUrl}
                             ref={iframeRef}
                             src={previewUrl}
                             className="w-full h-full border-none"

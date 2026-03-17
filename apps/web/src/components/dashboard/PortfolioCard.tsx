@@ -2,7 +2,8 @@
 
 import React, { memo } from "react"
 import { motion } from "framer-motion"
-import { MoreVertical, Layers, Clock, Eye, Edit3, Settings, Globe } from "lucide-react"
+import { MoreVertical, Layers, Clock, Eye, Edit3, Settings, Globe, Trash2 } from "lucide-react"
+import { projectService } from "@/services/project.service"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import Link from "next/link"
@@ -16,6 +17,7 @@ interface PortfolioCardProps {
     views: number
     imageUrl?: string
     delay?: number
+    onDelete?: (id: number) => void
 }
 
 export const PortfolioCard = memo(({
@@ -26,8 +28,30 @@ export const PortfolioCard = memo(({
     lastEdited,
     views,
     imageUrl,
-    delay = 0
+    delay = 0,
+    onDelete
 }: PortfolioCardProps) => {
+    const [isDeleting, setIsDeleting] = React.useState(false)
+
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        if (!confirm(`Are you sure you want to delete "${title}"? This will permanently remove all instance files and snapshots.`)) {
+            return
+        }
+
+        try {
+            setIsDeleting(true)
+            await projectService.deleteProject(id)
+            onDelete?.(id)
+        } catch (err) {
+            console.error("Failed to delete project", err)
+            alert("Failed to delete project. Please try again.")
+        } finally {
+            setIsDeleting(false)
+        }
+    }
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -103,8 +127,18 @@ export const PortfolioCard = memo(({
                             Edit
                         </Button>
                     </Link>
-                    <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground hover:bg-muted rounded-xl border border-border/50 active:scale-95">
-                        <Settings className="w-4.5 h-4.5" />
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="h-11 w-11 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 rounded-xl border border-border/50 active:scale-95 transition-colors"
+                    >
+                        {isDeleting ? (
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <Trash2 className="w-4.5 h-4.5" />
+                        )}
                     </Button>
                 </div>
             </div>

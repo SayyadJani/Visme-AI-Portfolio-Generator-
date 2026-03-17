@@ -60,6 +60,28 @@ export async function uploadTemplateThumbnail(
 }
 
 /**
+ * Upload multiple preview images to Cloudinary
+ */
+export async function uploadTemplatePreviews(
+  filePaths: string[],
+  slug: string
+): Promise<CloudinaryUploadResult[]> {
+  const uploadPromises = filePaths.map(path => 
+    cloudinary.uploader.upload(path, {
+      resource_type: 'image',
+      folder: `portfolio-builder/templates/${slug}/previews`,
+      transformation: [{ width: 1200, crop: 'limit' }],
+    })
+  );
+
+  const results = await Promise.all(uploadPromises);
+  return results.map(r => ({
+    secureUrl: r.secure_url,
+    publicId: r.public_id,
+  }));
+}
+
+/**
  * Delete a file from Cloudinary by public_id (used if DB save fails after upload)
  */
 export async function deleteFromCloudinary(

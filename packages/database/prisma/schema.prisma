@@ -50,6 +50,7 @@ model Template {
   domain      String
   gitRepoUrl  String    // e.g. "https://github.com/yourorg/template-minimal-dark"
   thumbUrl    String?
+  previews    String[]  @default([])
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

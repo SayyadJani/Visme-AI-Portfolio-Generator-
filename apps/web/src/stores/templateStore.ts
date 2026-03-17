@@ -11,6 +11,7 @@ export interface Template {
     // Optional display metadata
     category?: string;
     tags?: string[];
+    previews?: string[];
     badge?: "New" | "Popular";
 }
 
