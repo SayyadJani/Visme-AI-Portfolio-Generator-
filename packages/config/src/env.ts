@@ -14,6 +14,7 @@ export const server1EnvSchema = z.object({
   SERVER2_INTERNAL_SECRET: z.string().min(16),
   CLAUDE_API_KEY: z.string().min(1),
   GEMINI_API_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
   OLLAMA_URL: z.string().url().default('http://localhost:11434'),
   OLLAMA_MODEL: z.string().default('llama3.2'),
   CDN_BUCKET: z.string().min(1),

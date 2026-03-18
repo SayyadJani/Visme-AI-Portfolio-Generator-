@@ -10,6 +10,7 @@ import deployRoutes from './routes/deploy.routes';
 import previewRoutes from './routes/preview.routes';
 import { adminRoutes } from './routes/admin.routes';
 import userRoutes from './routes/user.routes';
+import aiRoutes from './routes/ai.routes';
 
 import { errorHandler } from './middleware/errorHandler.middleware';
 import { RedisService } from './services/redis.service';
@@ -46,6 +47,7 @@ app.use('/api/deploy', deployRoutes);
 app.use('/api/preview', previewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

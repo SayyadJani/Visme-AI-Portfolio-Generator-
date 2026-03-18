@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react"
 import { useFileStore } from "./fileStore"
-import { Loader2, Plus, Trash2, Save, FileJson } from "lucide-react"
+import { Loader2, Plus, Trash2, Save, FileJson, Sparkles } from "lucide-react"
 import { useSnackbar } from "notistack"
+import { aiService } from "@/services/ai.service"
 
 export default function FormEditor() {
-    const { projectFiles, pendingSandpackSync, editorBuffers, saveFile } = useFileStore()
+    const { projectFiles, pendingSandpackSync, editorBuffers, saveFile, parsedResume } = useFileStore()
     const { enqueueSnackbar } = useSnackbar()
     
     // Find the data file (Supports .json natively, or fallback to .js/.ts)
@@ -24,6 +25,7 @@ export default function FormEditor() {
         
     const [formData, setFormData] = useState<any>(null)
     const [parseError, setParseError] = useState<string | null>(null)
+    const [isGenerating, setIsGenerating] = useState(false)
 
     // Try to parse the configuration
     useEffect(() => {
@@ -87,6 +89,24 @@ export default function FormEditor() {
         enqueueSnackbar(`Data from ${dataFilePath.split('/').pop()} Saved`, { variant: "success" })
     }
 
+    const handleAIGenerate = async () => {
+        if (!parsedResume) {
+            enqueueSnackbar("No parsed resume found! Upload one on the dashboard first.", { variant: "warning" })
+            return
+        }
+        setIsGenerating(true)
+        try {
+            // Calls server1 → POST /api/ai/merge-resume
+            const updatedData = await aiService.mergeResumeIntoPortfolioData(formData, parsedResume as any)
+            setFormData(updatedData)
+            enqueueSnackbar("AI customized your portfolio! Review changes and click Save & Apply.", { variant: "info" })
+        } catch (e: any) {
+            enqueueSnackbar(e?.response?.data?.error?.message || e.message || "AI merge failed", { variant: "error" })
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
     if (!dataFilePath) {
         return (
             <div className="h-full w-full flex flex-col items-center justify-center p-6 text-muted-foreground bg-[#0b0b0e]">
@@ -133,38 +153,44 @@ export default function FormEditor() {
         // Handle Arrays dynamically
         if (Array.isArray(value)) {
             return (
-                <div key={path.join('.')} className={`${isRoot ? 'space-y-6 mb-10' : 'mt-6'}`}>
-                    <div className="flex items-center justify-between pb-3 border-b border-[#2a2a30]">
-                        <h3 className={`${isRoot ? 'text-sm' : 'text-xs'} font-black text-white capitalize flex items-center gap-2`}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                <div key={path.join('.')} className={`${isRoot ? 'space-y-4 mb-6 mt-4' : 'mt-5 space-y-3'}`}>
+                    <div className="flex items-center justify-between pb-2 border-b border-[#2a2a30]">
+                        <h3 className={`${isRoot ? 'text-sm' : 'text-xs'} font-bold text-[#e0e0e0] capitalize flex items-center gap-2 tracking-wide`}>
+                            {isRoot && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>}
                             {formatLabel(nodeName)}
                         </h3>
+                        {/* Compact add button */}
                         <button 
                             onClick={() => handleAddArrayItem(path)}
-                            className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-white bg-indigo-600 px-3 py-1.5 rounded hover:bg-indigo-500 transition-colors"
+                            className="flex items-center gap-1 text-[10px] uppercase font-bold text-white bg-indigo-600/20 text-indigo-400 px-2 py-1 rounded hover:bg-indigo-600 hover:text-white transition-all border border-indigo-500/20"
                         >
-                            <Plus className="w-3.5 h-3.5" /> Add
+                            <Plus className="w-3 h-3" /> Add
                         </button>
                     </div>
                     
                     {value.length === 0 && (
-                        <div className="p-8 text-center bg-[#121216] border border-dashed border-[#2a2a30] rounded-xl text-muted-foreground/50 text-xs mt-4">
-                            No {formatLabel(nodeName)} yet.
+                        <div className="p-4 text-center bg-[#0d0d10] border border-dashed border-[#2a2a30] rounded-lg text-muted-foreground/50 text-[11px] mt-2">
+                            No items added. Click 'Add' to start.
                         </div>
                     )}
                     
-                    <div className="grid gap-4 mt-4">
+                    <div className="flex flex-col gap-3 mt-3">
                         {value.map((item, idx) => (
                             <div key={idx} className="p-4 bg-[#121216] border border-[#2a2a30] rounded-xl relative group transition-all hover:border-indigo-500/30">
-                                <button 
-                                    onClick={() => handleRemoveArrayItem(path, idx)}
-                                    className="absolute top-4 right-4 text-muted-foreground/40 hover:text-red-500 transition-colors"
-                                    title="Delete Item"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                                {/* Render the array item directly inside the card without extra wrapping if it's simple */}
-                                <div className="pr-8">
+                                <div className="absolute top-3 right-3 z-10">
+                                    <button 
+                                        onClick={() => handleRemoveArrayItem(path, idx)}
+                                        className="p-1.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-colors opacity-60 group-hover:opacity-100"
+                                        title="Delete Item"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                {/* Header for the item */}
+                                <div className="text-[10px] font-bold text-muted-foreground/40 uppercase mb-3 pb-2 border-b border-[#1c1c22]">
+                                    Item {idx + 1}
+                                </div>
+                                <div className="pr-2">
                                     {renderNode([...path, idx], item, depth + 1)}
                                 </div>
                             </div>
@@ -179,23 +205,24 @@ export default function FormEditor() {
             const simpleObj = isRoot ? false : isSimpleObject(value);
             
             return (
-                <div key={path.join('.')} className={`${isRoot ? 'space-y-6 mb-10' : simpleObj ? 'mt-2' : 'mt-6 p-5 bg-[#121216] border border-[#2a2a30] rounded-xl'}`}>
+                <div key={path.join('.')} className={`${isRoot ? 'space-y-5 mb-8' : simpleObj ? 'mt-3' : 'mt-4 p-4 bg-[#121216] border border-[#2a2a30] rounded-xl'}`}>
+                    {/* Header for nested non-simple objects */}
                     {(!isRoot && !simpleObj && typeof path[path.length - 1] === 'string') && (
-                        <h4 className="text-xs font-black text-white capitalize mb-4 pb-2 border-b border-[#2a2a30]">
+                        <h4 className="text-xs font-bold text-[#e0e0e0] capitalize mb-3 pb-2 border-b border-[#2a2a30] tracking-wide">
                             {formatLabel(String(path[path.length - 1]))}
                         </h4>
                     )}
                     
-                    {/* Root sections visually group inputs closely together without borders */}
+                    {/* Header for root sections */}
                     {isRoot && typeof path[path.length - 1] === 'string' && (
-                        <h3 className="text-sm font-black text-white capitalize flex items-center gap-2 pb-3 border-b border-[#2a2a30]">
+                        <h3 className="text-sm font-bold text-[#e0e0e0] capitalize flex items-center gap-2 pb-2 border-b border-[#2a2a30] tracking-wide">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                             {formatLabel(String(path[path.length - 1]))}
                         </h3>
                     )}
                     
-                    {/* Render properties in a clean responsive grid */}
-                    <div className={`grid gap-x-6 gap-y-5 ${simpleObj || isRoot ? 'grid-cols-1 sm:grid-cols-2' : ''}`}>
+                    {/* Render properties strictly stacked for narrow sidebars */}
+                    <div className="flex flex-col gap-4 w-full">
                         {Object.keys(value).map((key) => renderNode([...path, key], value[key], depth + 1))}
                     </div>
                 </div>
@@ -203,14 +230,13 @@ export default function FormEditor() {
         }
 
         // Handle primitives (Strings, Numbers, Booleans)
-        // If the path parent represents an array index, don't label it "Item 1", "Item 2", just don't show label or use index.
         const labelName = typeof path[path.length - 1] === 'number' ? `Value` : String(path[path.length - 1])
-        const isTextArea = typeof value === "string" && (value.length > 50 || ['description', 'bio', 'summary', 'content'].some(w => labelName.toLowerCase().includes(w)));
+        const isTextArea = typeof value === "string" && (value.length > 50 || ['description', 'bio', 'summary', 'content', 'url', 'link'].some(w => labelName.toLowerCase().includes(w)));
         
         return (
-            <div key={path.join('.')} className={`space-y-1.5 flex flex-col ${isTextArea || typeof path[path.length - 1] === 'number' ? 'col-span-full' : ''}`}>
+            <div key={path.join('.')} className="space-y-1.5 flex flex-col w-full">
                 {typeof path[path.length - 1] !== 'number' && (
-                    <label className="text-[11px] font-bold text-muted-foreground/80 capitalize">
+                    <label className="text-[11px] font-semibold text-muted-foreground capitalize ml-0.5">
                         {formatLabel(labelName)}
                     </label>
                 )}
@@ -219,23 +245,25 @@ export default function FormEditor() {
                     <textarea 
                         value={value}
                         onChange={(e) => handleNestedChange(path, e.target.value)}
-                        className="w-full bg-[#0d0d10] border border-[#2a2a30] rounded-lg p-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-[#e0e0e0] transition-all min-h-[100px] resize-y"
+                        placeholder={`Enter ${formatLabel(labelName).toLowerCase()}...`}
+                        className="w-full bg-[#0d0d10] border border-[#2a2a30] rounded-lg p-2.5 text-[13px] leading-relaxed focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-[#e0e0e0] transition-all min-h-[85px] resize-y"
                     />
                 ) : typeof value === "boolean" ? (
                     <select 
                         value={value ? "true" : "false"}
                         onChange={(e) => handleNestedChange(path, e.target.value === "true")}
-                        className="w-full bg-[#0d0d10] border border-[#2a2a30] rounded-lg p-3 text-sm focus:outline-none focus:border-indigo-500 text-[#e0e0e0] appearance-none cursor-pointer"
+                        className="w-full bg-[#0d0d10] border border-[#2a2a30] rounded-lg p-2.5 text-[13px] focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-[#e0e0e0] appearance-none cursor-pointer outline-none"
                     >
-                        <option value="true">True (Enabled)</option>
-                        <option value="false">False (Disabled)</option>
+                        <option value="true">Enabled (True)</option>
+                        <option value="false">Disabled (False)</option>
                     </select>
                 ) : (
                     <input 
                         type={typeof value === 'number' ? 'number' : 'text'} 
                         value={value}
                         onChange={(e) => handleNestedChange(path, typeof value === 'number' ? Number(e.target.value) : e.target.value)}
-                        className="w-full bg-[#0d0d10] border border-[#2a2a30] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-[#e0e0e0] transition-all"
+                        placeholder={`Enter ${formatLabel(labelName).toLowerCase()}...`}
+                        className="w-full bg-[#0d0d10] border border-[#2a2a30] rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-[#e0e0e0] transition-all"
                     />
                 )}
             </div>
@@ -314,15 +342,34 @@ export default function FormEditor() {
             <div className="flex items-center justify-between p-4 border-b border-[#1c1c22] shrink-0 bg-[#0d0d10]">
                 <div className="flex items-center gap-2">
                     <FileJson className="w-4 h-4 text-indigo-400" />
-                    <span className="text-xs font-black uppercase tracking-widest">Dynamic Portfolio Editor</span>
+                    <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Portfolio Editor</span>
                 </div>
-                <button 
-                    onClick={handleSave}
-                    className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-md text-[10px] font-bold uppercase tracking-widest text-white transition-all shadow-lg shadow-indigo-500/20"
-                >
-                    <Save className="w-3.5 h-3.5" />
-                    Save & Apply
-                </button>
+                
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={handleAIGenerate}
+                        disabled={isGenerating}
+                        className="flex items-center gap-2 px-3 sm:px-4 py-1.5 bg-[#121216] border border-[#2a2a30] hover:border-violet-500/50 hover:bg-[#1a1a20] rounded-md text-[10px] font-bold uppercase tracking-widest text-[#e0e0e0] transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                    >
+                        {isGenerating ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400 " />
+                        ) : (
+                            <Sparkles className="w-3.5 h-3.5 text-violet-400 group-hover:text-violet-300" />
+                        )}
+                        <span className="hidden sm:inline">{isGenerating ? 'Auto-filling...' : 'Auto-fill with AI'}</span>
+                        <span className="sm:hidden">AI</span>
+                    </button>
+                    
+                    <button 
+                        onClick={handleSave}
+                        disabled={isGenerating}
+                        className="flex items-center gap-2 px-3 sm:px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-md text-[10px] font-bold uppercase tracking-widest text-white transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:shadow-none"
+                    >
+                        <Save className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Save & Apply</span>
+                        <span className="sm:hidden">Save</span>
+                    </button>
+                </div>
             </div>
 
             {/* Scrollable Dynamic Form */}
