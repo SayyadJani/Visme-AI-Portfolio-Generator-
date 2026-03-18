@@ -113,32 +113,199 @@ export default function FormEditor() {
         )
     }
 
-    // Render forms recursively
-    const handleChange = (key: string, value: any) => {
-        setFormData((prev: any) => ({ ...prev, [key]: value }))
+    // Simple check to identify if an object is "simple" (only contains primitives, no nested items)
+    const isSimpleObject = (obj: any): boolean => {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+        return Object.values(obj).every(v => typeof v !== 'object' || v === null);
+    };
+
+    // Dynamic recursive renderer for any structure
+    const renderNode = (path: (string | number)[], value: any, depth: number = 0): React.ReactNode => {
+        // Handle null/undefined
+        if (value === null || value === undefined) return null;
+
+        const isRoot = depth === 0;
+
+        // Better formatting for labels
+        const formatLabel = (str: string) => str.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+        const nodeName = path.length > 0 ? String(path[path.length - 1]) : "Configuration";
+
+        // Handle Arrays dynamically
+        if (Array.isArray(value)) {
+            return (
+                <div key={path.join('.')} className={`${isRoot ? 'space-y-6 mb-10' : 'mt-6'}`}>
+                    <div className="flex items-center justify-between pb-3 border-b border-[#2a2a30]">
+                        <h3 className={`${isRoot ? 'text-sm' : 'text-xs'} font-black text-white capitalize flex items-center gap-2`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                            {formatLabel(nodeName)}
+                        </h3>
+                        <button 
+                            onClick={() => handleAddArrayItem(path)}
+                            className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-white bg-indigo-600 px-3 py-1.5 rounded hover:bg-indigo-500 transition-colors"
+                        >
+                            <Plus className="w-3.5 h-3.5" /> Add
+                        </button>
+                    </div>
+                    
+                    {value.length === 0 && (
+                        <div className="p-8 text-center bg-[#121216] border border-dashed border-[#2a2a30] rounded-xl text-muted-foreground/50 text-xs mt-4">
+                            No {formatLabel(nodeName)} yet.
+                        </div>
+                    )}
+                    
+                    <div className="grid gap-4 mt-4">
+                        {value.map((item, idx) => (
+                            <div key={idx} className="p-4 bg-[#121216] border border-[#2a2a30] rounded-xl relative group transition-all hover:border-indigo-500/30">
+                                <button 
+                                    onClick={() => handleRemoveArrayItem(path, idx)}
+                                    className="absolute top-4 right-4 text-muted-foreground/40 hover:text-red-500 transition-colors"
+                                    title="Delete Item"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                                {/* Render the array item directly inside the card without extra wrapping if it's simple */}
+                                <div className="pr-8">
+                                    {renderNode([...path, idx], item, depth + 1)}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Handle nested Objects dynamically (that are not arrays)
+        if (typeof value === 'object') {
+            const simpleObj = isRoot ? false : isSimpleObject(value);
+            
+            return (
+                <div key={path.join('.')} className={`${isRoot ? 'space-y-6 mb-10' : simpleObj ? 'mt-2' : 'mt-6 p-5 bg-[#121216] border border-[#2a2a30] rounded-xl'}`}>
+                    {(!isRoot && !simpleObj && typeof path[path.length - 1] === 'string') && (
+                        <h4 className="text-xs font-black text-white capitalize mb-4 pb-2 border-b border-[#2a2a30]">
+                            {formatLabel(String(path[path.length - 1]))}
+                        </h4>
+                    )}
+                    
+                    {/* Root sections visually group inputs closely together without borders */}
+                    {isRoot && typeof path[path.length - 1] === 'string' && (
+                        <h3 className="text-sm font-black text-white capitalize flex items-center gap-2 pb-3 border-b border-[#2a2a30]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                            {formatLabel(String(path[path.length - 1]))}
+                        </h3>
+                    )}
+                    
+                    {/* Render properties in a clean responsive grid */}
+                    <div className={`grid gap-x-6 gap-y-5 ${simpleObj || isRoot ? 'grid-cols-1 sm:grid-cols-2' : ''}`}>
+                        {Object.keys(value).map((key) => renderNode([...path, key], value[key], depth + 1))}
+                    </div>
+                </div>
+            )
+        }
+
+        // Handle primitives (Strings, Numbers, Booleans)
+        // If the path parent represents an array index, don't label it "Item 1", "Item 2", just don't show label or use index.
+        const labelName = typeof path[path.length - 1] === 'number' ? `Value` : String(path[path.length - 1])
+        const isTextArea = typeof value === "string" && (value.length > 50 || ['description', 'bio', 'summary', 'content'].some(w => labelName.toLowerCase().includes(w)));
+        
+        return (
+            <div key={path.join('.')} className={`space-y-1.5 flex flex-col ${isTextArea || typeof path[path.length - 1] === 'number' ? 'col-span-full' : ''}`}>
+                {typeof path[path.length - 1] !== 'number' && (
+                    <label className="text-[11px] font-bold text-muted-foreground/80 capitalize">
+                        {formatLabel(labelName)}
+                    </label>
+                )}
+                
+                {isTextArea ? (
+                    <textarea 
+                        value={value}
+                        onChange={(e) => handleNestedChange(path, e.target.value)}
+                        className="w-full bg-[#0d0d10] border border-[#2a2a30] rounded-lg p-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-[#e0e0e0] transition-all min-h-[100px] resize-y"
+                    />
+                ) : typeof value === "boolean" ? (
+                    <select 
+                        value={value ? "true" : "false"}
+                        onChange={(e) => handleNestedChange(path, e.target.value === "true")}
+                        className="w-full bg-[#0d0d10] border border-[#2a2a30] rounded-lg p-3 text-sm focus:outline-none focus:border-indigo-500 text-[#e0e0e0] appearance-none cursor-pointer"
+                    >
+                        <option value="true">True (Enabled)</option>
+                        <option value="false">False (Disabled)</option>
+                    </select>
+                ) : (
+                    <input 
+                        type={typeof value === 'number' ? 'number' : 'text'} 
+                        value={value}
+                        onChange={(e) => handleNestedChange(path, typeof value === 'number' ? Number(e.target.value) : e.target.value)}
+                        className="w-full bg-[#0d0d10] border border-[#2a2a30] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-[#e0e0e0] transition-all"
+                    />
+                )}
+            </div>
+        );
     }
 
-    const handleProjectChange = (index: number, key: string, value: any) => {
+    // Helper to deeply update state
+    const handleNestedChange = (path: (string | number)[], newValue: any) => {
         setFormData((prev: any) => {
-            const newProjects = [...prev.projects]
-            newProjects[index] = { ...newProjects[index], [key]: value }
-            return { ...prev, projects: newProjects }
-        })
+            if (!prev) return prev;
+            const newState = JSON.parse(JSON.stringify(prev)); // Deep clone
+            let current = newState;
+            
+            for (let i = 0; i < path.length - 1; i++) {
+                const key = path[i];
+                if (key !== undefined) current = current[key as keyof typeof current];
+            }
+            
+            const lastKey = path[path.length - 1];
+            if (lastKey !== undefined) current[lastKey as keyof typeof current] = newValue;
+            return newState;
+        });
     }
 
-    const handleAddProject = () => {
-        setFormData((prev: any) => ({
-            ...prev,
-            projects: [...(prev.projects || []), { name: "New Project", description: "" }]
-        }))
-    }
-
-    const handleRemoveProject = (index: number) => {
+    const handleAddArrayItem = (path: (string | number)[]) => {
         setFormData((prev: any) => {
-            const newProjects = [...prev.projects]
-            newProjects.splice(index, 1)
-            return { ...prev, projects: newProjects }
-        })
+            if (!prev) return prev;
+            const newState = JSON.parse(JSON.stringify(prev));
+            let current = newState;
+            
+            // Navigate to array
+            for (let i = 0; i < path.length; i++) {
+                const key = path[i];
+                if (key !== undefined) current = current[key as keyof typeof current];
+            }
+            
+            // Determine structure of new item based on first element (if exists)
+            let newItem: any = {};
+            if (Array.isArray(current) && current.length > 0) {
+                // Empty the values of the template object
+                if (typeof current[0] === 'object' && current[0] !== null) {
+                    newItem = Object.keys(current[0]).reduce((acc, key) => {
+                        acc[key] = Array.isArray(current[0][key]) ? [] : typeof current[0][key] === 'string' ? "" : null;
+                        return acc;
+                    }, {} as any);
+                } else if (typeof current[0] === 'string') {
+                    newItem = "";
+                }
+            }
+            
+            if (Array.isArray(current)) current.push(newItem);
+            return newState;
+        });
+    }
+
+    const handleRemoveArrayItem = (path: (string | number)[], indexToRemove: number) => {
+        setFormData((prev: any) => {
+            if (!prev) return prev;
+            const newState = JSON.parse(JSON.stringify(prev));
+            let current = newState;
+            
+            // Navigate to array
+            for (let i = 0; i < path.length; i++) {
+                const key = path[i];
+                if (key !== undefined) current = current[key as keyof typeof current];
+            }
+            
+            if (Array.isArray(current)) current.splice(indexToRemove, 1);
+            return newState;
+        });
     }
 
     return (
@@ -147,7 +314,7 @@ export default function FormEditor() {
             <div className="flex items-center justify-between p-4 border-b border-[#1c1c22] shrink-0 bg-[#0d0d10]">
                 <div className="flex items-center gap-2">
                     <FileJson className="w-4 h-4 text-indigo-400" />
-                    <span className="text-xs font-black uppercase tracking-widest">Portfolio Editor</span>
+                    <span className="text-xs font-black uppercase tracking-widest">Dynamic Portfolio Editor</span>
                 </div>
                 <button 
                     onClick={handleSave}
@@ -158,88 +325,11 @@ export default function FormEditor() {
                 </button>
             </div>
 
-            {/* Scrollable Form */}
+            {/* Scrollable Dynamic Form */}
             <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar relative">
-                
-                {/* Basic Details */}
-                <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 border-b border-[#1c1c22] pb-2">Basic Details</h3>
-                    <div className="grid gap-4 max-w-2xl">
-                        {Object.keys(formData).map((key) => {
-                            // Filter out arrays and complex objects to handle separately
-                            if (typeof formData[key] === "object") return null
-                            
-                            return (
-                                <div key={key} className="space-y-1.5">
-                                    <label className="text-[10px] uppercase font-bold text-muted-foreground/80 tracking-widest">{key}</label>
-                                    {typeof formData[key] === "string" && formData[key].length > 50 ? (
-                                        <textarea 
-                                            value={formData[key]}
-                                            onChange={(e) => handleChange(key, e.target.value)}
-                                            className="w-full bg-[#16161a] border border-[#1c1c22] rounded-lg p-3 text-sm focus:outline-none focus:border-indigo-500/50 min-h-[100px] text-[#e0e0e0]"
-                                        />
-                                    ) : (
-                                        <input 
-                                            type="text" 
-                                            value={formData[key]}
-                                            onChange={(e) => handleChange(key, e.target.value)}
-                                            className="w-full bg-[#16161a] border border-[#1c1c22] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500/50 text-[#e0e0e0]"
-                                        />
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
+                <div className="bg-[#0b0b0e] rounded-xl">
+                    {Object.keys(formData).map((key) => renderNode([key], formData[key]))}
                 </div>
-
-                {/* Projects Section */}
-                {Array.isArray(formData.projects) && (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between border-b border-[#1c1c22] pb-2">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400">Projects</h3>
-                            <button 
-                                onClick={handleAddProject}
-                                className="flex items-center gap-1 text-[10px] uppercase font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                                Add Project
-                            </button>
-                        </div>
-                        
-                        <div className="grid gap-4 max-w-2xl">
-                            {formData.projects.map((proj: any, idx: number) => (
-                                <div key={idx} className="p-4 bg-[#16161a] border border-[#1c1c22] rounded-xl space-y-3 relative group transition-all hover:border-[#2a2a30]">
-                                    <button 
-                                        onClick={() => handleRemoveProject(idx)}
-                                        className="absolute -top-3 -right-3 p-1.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                    
-                                    {Object.keys(proj).map((key) => (
-                                        <div key={key} className="space-y-1">
-                                            <label className="text-[9px] uppercase font-bold text-muted-foreground/60 tracking-wider">{key}</label>
-                                            {typeof proj[key] === "string" && key === "description" ? (
-                                                <textarea 
-                                                    value={proj[key]}
-                                                    onChange={(e) => handleProjectChange(idx, key, e.target.value)}
-                                                    className="w-full bg-[#0b0b0e] border border-[#1c1c22] rounded-lg p-3 text-xs focus:outline-none focus:border-indigo-500/50 min-h-[80px]"
-                                                />
-                                            ) : (
-                                                <input 
-                                                    type="text" 
-                                                    value={proj[key]}
-                                                    onChange={(e) => handleProjectChange(idx, key, e.target.value)}
-                                                    className="w-full bg-[#0b0b0e] border border-[#1c1c22] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500/50"
-                                                />
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     )
