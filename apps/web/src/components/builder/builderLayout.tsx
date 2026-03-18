@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import { 
     PanelLeftClose, PanelLeftOpen, Terminal as TerminalIcon, X, 
     ChevronDown, ChevronUp, Trash2, Files, Search, 
-    Sparkles, Settings, Command, Activity, Loader2
+    Sparkles, Settings, Activity, Loader2, Code2, LayoutList
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import FileExplorer from "./FileExplorer"
@@ -17,6 +17,16 @@ const CodeEditor = dynamic(() => import("./CodeEditor"), {
         <div className="h-full w-full flex flex-col items-center justify-center bg-[#0b0b0e] border border-[#1c1c22]">
             <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Loading Editor...</p>
+        </div>
+    )
+})
+
+const FormEditor = dynamic(() => import("./FormEditor"), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full w-full flex flex-col items-center justify-center bg-[#0b0b0e] border border-[#1c1c22]">
+            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Loading Form...</p>
         </div>
     )
 })
@@ -38,7 +48,7 @@ const SuggestionOverlay = dynamic(() => import("./SuggestionOverlay"), {
 export default function BuilderLayout() {
     const [explorerOpen, setExplorerOpen] = useState(true)
     const [consoleOpen, setConsoleOpen] = useState(false) // Default closed for cleaner look
-    const [activeTab, setActiveTab] = useState("explorer")
+    const [editorMode, setEditorMode] = useState<"form" | "code">("form")
 
     return (
         <div className="flex h-full w-full overflow-hidden bg-[#0b0b0e]">
@@ -46,16 +56,27 @@ export default function BuilderLayout() {
             <div className="w-12 shrink-0 flex flex-col items-center py-4 bg-[#0d0d10] border-r border-[#1c1c22] z-40">
                 <div className="flex flex-col gap-4">
                     <button 
-                        onClick={() => { setExplorerOpen(true); setActiveTab("explorer") }}
-                        className={cn("p-2 rounded-md transition-all", activeTab === "explorer" ? "text-indigo-500 bg-indigo-500/5" : "text-muted-foreground hover:text-foreground")}
+                        onClick={() => { setExplorerOpen(!explorerOpen) }}
+                        className={cn("p-2 rounded-md transition-all", explorerOpen ? "text-indigo-500 bg-indigo-500/5" : "text-muted-foreground hover:text-foreground")}
+                        title="File Explorer"
                     >
                         <Files className="w-5 h-5" />
                     </button>
-                    <button className="p-2 rounded-md text-muted-foreground/40 cursor-not-allowed">
-                        <Search className="w-5 h-5" />
+                    
+                    <button 
+                        onClick={() => setEditorMode("form")}
+                        className={cn("p-2 rounded-md transition-all", editorMode === "form" ? "text-indigo-500 bg-indigo-500/5" : "text-muted-foreground hover:text-foreground")}
+                        title="Form Editor"
+                    >
+                        <LayoutList className="w-5 h-5" />
                     </button>
-                    <button className="p-2 rounded-md text-muted-foreground/40 cursor-not-allowed">
-                        <Sparkles className="w-5 h-5" />
+                    
+                    <button 
+                        onClick={() => setEditorMode("code")}
+                        className={cn("p-2 rounded-md transition-all", editorMode === "code" ? "text-indigo-500 bg-indigo-500/5" : "text-muted-foreground hover:text-foreground")}
+                        title="Code Editor"
+                    >
+                        <Code2 className="w-5 h-5" />
                     </button>
                 </div>
 
@@ -105,7 +126,7 @@ export default function BuilderLayout() {
                 {/* ── Editor & Console Panel (Middle) ───────────────────────── */}
                 <div className="flex-[1.2] min-w-0 flex flex-col overflow-hidden relative border-r border-[#1c1c22]">
                     <div className="flex-1 overflow-hidden shadow-2xl">
-                        <CodeEditor />
+                        {editorMode === "code" ? <CodeEditor /> : <FormEditor />}
                     </div>
 
                     {/* VS Code Style Terminal / Console */}
