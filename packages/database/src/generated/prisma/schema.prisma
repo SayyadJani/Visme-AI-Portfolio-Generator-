@@ -26,15 +26,16 @@ enum SnapshotType {
 // ── Models ─────────────────────────────────────────────────────────────────
 
 model User {
-  id           Int          @id @default(autoincrement())
-  email        String       @unique
-  passwordHash String
-  name         String
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  projects     Project[]
-  resumes      Resume[]
-  deployments  Deployment[]
+  id            Int          @id @default(autoincrement())
+  email         String       @unique
+  passwordHash  String
+  name          String
+  workspacePath String? // e.g. "C:\Users\JANI PASHA\Portfolios"
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  projects      Project[]
+  resumes       Resume[]
+  deployments   Deployment[]
 
   @@map("users")
 }

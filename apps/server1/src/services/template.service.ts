@@ -40,12 +40,15 @@ export async function createTemplate(
     previewFilePaths,
   } = params;
 
-  const slug = generateSlug(name);
+  let slug = generateSlug(name);
 
-  // Check slug is unique
-  const existing = await prisma.template.findUnique({ where: { slug } });
-  if (existing) {
-    throw new Error(`A template with slug "${slug}" already exists`);
+  // Check slug is unique and increment if necessary
+  let existing = await prisma.template.findUnique({ where: { slug } });
+  let counter = 1;
+  while (existing) {
+    slug = `${generateSlug(name)}-${counter}`;
+    existing = await prisma.template.findUnique({ where: { slug } });
+    counter++;
   }
 
   let thumbUpload: { secureUrl: string; publicId: string } | null = null;

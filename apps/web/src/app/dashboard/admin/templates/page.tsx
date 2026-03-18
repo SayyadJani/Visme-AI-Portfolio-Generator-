@@ -11,13 +11,13 @@ import { templateService } from "@/services/template.service"
 import { useRouter } from "next/navigation"
 import { ClientTemplateGrid } from "@/components/templates/ClientTemplateGrid"
 import { cn } from "@/lib/utils"
+import { useSnackbar } from "notistack"
 
 export default function AdminTemplateUploadPage() {
     const router = useRouter()
+    const { enqueueSnackbar } = useSnackbar()
     const [activeTab, setActiveTab] = useState<"deploy" | "library">("deploy")
     const [loading, setLoading] = useState(false)
-    const [success, setSuccess] = useState(false)
-    const [error, setError] = useState<string | null>(null)
     const [templateCount, setTemplateCount] = useState(0)
 
     const [formData, setFormData] = useState({
@@ -33,9 +33,25 @@ export default function AdminTemplateUploadPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        
+        // 1. Verify Key First (Lightweight Check)
+        const isKeyValid = await templateService.verifyKey(formData.adminKey)
+        if (!isKeyValid) {
+            enqueueSnackbar("Authentication Failed: Invalid Admin Secret Signature.", { 
+                variant: "error",
+                style: { 
+                    background: "#ef4444", 
+                    color: "white", 
+                    borderRadius: "12px", 
+                    fontFamily: "monospace", 
+                    fontSize: "12px", 
+                    textTransform: "uppercase" 
+                }
+            })
+            return
+        }
+
         setLoading(true)
-        setError(null)
-        setSuccess(false)
 
         try {
             const data = new FormData()
@@ -57,7 +73,7 @@ export default function AdminTemplateUploadPage() {
 
             await templateService.uploadTemplate(data, formData.adminKey)
             
-            setSuccess(true)
+            enqueueSnackbar("Template published successfully!", { variant: "success", style: { background: "#10b981", color: "white", borderRadius: "12px", fontFamily: "monospace", fontSize: "12px", textTransform: "uppercase" } })
             setFormData({
                 name: "",
                 description: "",
@@ -71,11 +87,31 @@ export default function AdminTemplateUploadPage() {
             
             setTimeout(() => {
                 setActiveTab("library")
-                setSuccess(false)
             }, 2000)
         } catch (err: any) {
             console.error("UPLOAD_ERROR:", err)
-            setError(err.response?.data?.error?.message || "Upload failed. Verify your Admin Key.")
+            
+            let errorMessage = "Upload failed. Please try again."
+            
+            if (err.response?.status === 401 || err.response?.status === 403) {
+                errorMessage = "Invalid Admin Sequence Header. Access Denied."
+            } else if (err.response?.data?.error?.message?.toLowerCase().includes("slug") || err.message?.toLowerCase().includes("already exists")) {
+                errorMessage = "Deployment Conflict: A blueprint with this design signature already exists."
+            } else if (err.response?.data?.error?.message) {
+                errorMessage = err.response.data.error.message
+            }
+
+            enqueueSnackbar(errorMessage, { 
+                variant: "error", 
+                style: { 
+                    background: "#ef4444", 
+                    color: "white", 
+                    borderRadius: "12px", 
+                    fontFamily: "monospace", 
+                    fontSize: "12px", 
+                    textTransform: "uppercase" 
+                } 
+            })
         } finally {
             setLoading(false)
         }
@@ -88,7 +124,7 @@ export default function AdminTemplateUploadPage() {
             <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/20 blur-[120px] rounded-full pointer-events-none -translate-y-1/2" />
             <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none translate-y-1/2" />
 
-            <div className="relative p-8 lg:p-12 max-w-7xl mx-auto space-y-12 pb-32">
+            <div className="relative p-4 lg:p-8 max-w-screen-2xl mx-auto space-y-12 pb-32">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                     <div className="space-y-4">
@@ -178,28 +214,6 @@ export default function AdminTemplateUploadPage() {
                                     <div className="absolute top-0 right-0 p-8 opacity-5">
                                         <PlusCircle className="w-32 h-32" />
                                     </div>
-
-                                    {error && (
-                                        <motion.div 
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex items-center gap-3 text-destructive text-sm font-bold"
-                                        >
-                                            <ShieldAlert className="w-5 h-5" />
-                                            {error}
-                                        </motion.div>
-                                    )}
-
-                                    {success && (
-                                        <motion.div 
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-600 text-sm font-bold"
-                                        >
-                                            <CheckCircle2 className="w-5 h-5" />
-                                            Template published successfully!
-                                        </motion.div>
-                                    )}
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         {/* Name */}
@@ -434,7 +448,7 @@ export default function AdminTemplateUploadPage() {
                                 </div>
                             </div>
                             
-                            <div className="bg-muted/10 p-8 rounded-[3rem] border border-border/20 backdrop-blur-sm">
+                            <div className="bg-muted/10 p-4 lg:p-6 rounded-[3rem] border border-border/20 backdrop-blur-sm">
                                 <ClientTemplateGrid 
                                     isAdmin={true} 
                                     adminKey={formData.adminKey} 

@@ -11,7 +11,7 @@ export function useFullscreen() {
                 await target.requestFullscreen()
                 setIsFullscreen(true)
             } catch (err) {
-                console.error(`Error attempting to enable full-screen mode: ${err}`)
+                // FS failed
             }
         } else {
             if (document.exitFullscreen) {

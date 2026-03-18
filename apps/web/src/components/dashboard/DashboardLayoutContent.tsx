@@ -4,18 +4,25 @@ import { usePathname } from "next/navigation"
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar"
 import { DashboardNavbar } from "@/components/dashboard/DashboardNavbar"
 import { DashboardLayoutClient } from "@/components/dashboard/DashboardLayoutClient"
+import { WorkspaceDialog } from "@/components/dashboard/WorkspaceDialog"
 
 export function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const isBuilderPage = pathname === "/dashboard/portfolios/builder"
 
     if (isBuilderPage) {
-        return <DashboardLayoutClient>{children}</DashboardLayoutClient>
+        return (
+            <DashboardLayoutClient>
+                <WorkspaceDialog />
+                {children}
+            </DashboardLayoutClient>
+        )
     }
 
     return (
         <DashboardLayoutClient>
             <div className="h-screen w-screen overflow-hidden bg-background text-foreground flex flex-col select-none relative">
+                <WorkspaceDialog />
                 <DashboardNavbar />
                 <div className="flex flex-1 overflow-hidden">
                     <DashboardSidebar />

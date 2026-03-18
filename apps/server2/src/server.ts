@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import { parseEnv, server2EnvSchema } from '@repo/config';
 import { logger } from '@repo/shared-utils';
 import { internalRoutes } from './routes/internal.routes';
@@ -9,6 +10,7 @@ import { CleanupService } from './services/cleanup.service';
 const env = parseEnv(server2EnvSchema);
 const app = express();
 
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 // All routes require internal secret

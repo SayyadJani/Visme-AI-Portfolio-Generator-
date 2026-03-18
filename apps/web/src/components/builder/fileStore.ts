@@ -33,6 +33,7 @@ interface FileStoreState {
     isSaving: boolean
     previewRefreshKey: number
     previewError: string | null
+    loadError: string | null
     loadProjects: () => Promise<void>
     startPreview: () => Promise<void>
     stopPreview: () => Promise<void>
@@ -80,6 +81,7 @@ export const useFileStore = create<FileStoreState>()(
         isSaving: false,
         previewRefreshKey: 0,
         previewError: null,
+        loadError: null,
 
             // ─────────────────────────────────────────────────────────────────
             setResumeFile: (file) => set({ resumeFile: file }),
@@ -120,7 +122,6 @@ export const useFileStore = create<FileStoreState>()(
                         },
                     })
                 } catch (error) {
-                    console.error("PARSING_ERROR:", error)
                     throw error
                 }
             },
@@ -135,43 +136,35 @@ export const useFileStore = create<FileStoreState>()(
                     const projects = await projectService.getProjects()
                     set({ projects })
                 } catch (error) {
-                    console.error("LOAD_PROJECTS_ERROR:", error)
+                    // Silently fail or handle gracefully
                 }
             },
 
             startPreview: async () => {
                 const { currentInstanceId } = get()
                 if (!currentInstanceId) {
-                    console.warn("[fileStore] startPreview called but currentInstanceId is null")
                     return
                 }
 
-                console.log(`[fileStore] 🚀 Starting preview for instance ${currentInstanceId}...`)
-                set({ isPreviewLoading: true, previewError: null })
+                set({ isPreviewLoading: true, previewError: null, loadError: null })
                 try {
                     await previewService.startPreview(Number(currentInstanceId))
-                    console.log(`[fileStore] ✅ Preview requested successfully. Polling for status...`)
                     
                     // Poll for status until active and previewUrl is present
                     let attempts = 0
-                    const maxAttempts = 30 // Increased for slower installs
+                    const maxAttempts = 90 // Increased to allow 3 minutes (90 * 2s) for heavy installs
                     const poll = async () => {
                         if (attempts >= maxAttempts) {
                             const errorMsg = `Preview timeout: Dev server did not start after ${maxAttempts * 2}s. Check server logs.`
-                            console.error(`[fileStore] ❌ ${errorMsg}`)
                             set({ isPreviewLoading: false, previewError: errorMsg })
                             return
                         }
                         attempts++
-                        console.log(`[fileStore] ⏳ Polling attempt ${attempts}/${maxAttempts}...`)
                         try {
                             const status = await previewService.getStatus(Number(currentInstanceId))
-                            console.log(`[fileStore] 📊 Status received:`, status)
                             if (status.isActive && status.previewUrl) {
-                                console.log(`[fileStore] 🎉 Preview is ACTIVE! URL: ${status.previewUrl}`)
                                 set({ previewUrl: status.previewUrl, isPreviewLoading: false, previewError: null })
                             } else {
-                                console.log(`[fileStore] 🔄 Status not fully ready yet, polling again in 2s...`)
                                 setTimeout(poll, 2000)
                             }
                         } catch (pollError) {
@@ -182,7 +175,6 @@ export const useFileStore = create<FileStoreState>()(
                     poll()
                 } catch (error: any) {
                     const message = error.response?.data?.message || error.message || "Failed to start preview"
-                    console.error("[fileStore] 🛑 START_PREVIEW_ERROR:", message)
                     set({ isPreviewLoading: false, previewError: message })
                 }
             },
@@ -195,7 +187,7 @@ export const useFileStore = create<FileStoreState>()(
                     await previewService.stopPreview(Number(currentInstanceId))
                     set({ previewUrl: null, isPreviewLoading: false })
                 } catch (error) {
-                    console.error("STOP_PREVIEW_ERROR:", error)
+                    // Stop preview failed
                 }
             },
 
@@ -231,8 +223,9 @@ export const useFileStore = create<FileStoreState>()(
                     await get().loadAllProjectFiles()
 
                     return project
-                } catch (error) {
-                    console.error("CREATE_PROJECT_ERROR:", error)
+                } catch (error: any) {
+                    const message = error.response?.data?.message || error.message || "Project setup failed"
+                    set({ loadError: message })
                     throw error
                 }
             },
@@ -240,20 +233,18 @@ export const useFileStore = create<FileStoreState>()(
             setCurrentInstance: async (id: string) => {
                 const currentInstances = get().instances
                 const inst = currentInstances[id]
-                
-                console.log("[Store] setCurrentInstance →", id)
 
                 // Set the basic state first
                 set({
                     currentInstanceId: id,
                     projectFiles: inst?.files || {},
                     editorBuffers: {},
-                    pendingSandpackSync: null
+                    pendingSandpackSync: null,
+                    loadError: null
                 })
 
                 // If instance record is missing or files are empty, fetch from backend
                 if (!inst || !inst.files || Object.keys(inst.files).length === 0) {
-                    console.log("[Store] Project files missing or empty, fetching from backend...")
                     
                     // Create placeholder if missing to avoid downstream null checks
                     if (!inst) {
@@ -294,7 +285,7 @@ export const useFileStore = create<FileStoreState>()(
                     const { content } = await projectService.getFileContent(Number(currentInstanceId), path)
                     get().updateFile(path, content)
                 } catch (err) {
-                    console.error(`[Store] Failed to load file ${path}:`, err)
+                    // Failed to load file
                 }
             },
 
@@ -344,14 +335,15 @@ export const useFileStore = create<FileStoreState>()(
                             instances
                         };
                     })
-                } catch (err) {
-                    console.error("[Store] Failed to load project from Redis/Disk:", err)
+                } catch (err: any) {
+                    const message = err.response?.data?.message || err.message || "Failed to load project files"
+                    set({ loadError: message })
                 }
             },
 
             updateFile: (path, code) => set(s => {
                 const id = s.currentInstanceId
-                if (!id || !s.instances[id]) { console.error("[Store] updateFile: no instance!"); return s }
+                if (!id || !s.instances[id]) { return s }
                 const normalizedPath = normalizePath(path)
                 const updatedFiles: VirtualFileSystem = { ...s.projectFiles, [normalizedPath]: { code, language: inferLanguage(normalizedPath) } }
 
@@ -383,12 +375,10 @@ export const useFileStore = create<FileStoreState>()(
                 const code = editorBuffers[path]
 
                 if (code === undefined) {
-                    console.warn(`[Store] saveFile("${path}"): no buffer — nothing to save`)
                     return
                 }
 
                 if (!currentInstanceId) {
-                    console.error("[Store] Cannot save file: no active instance ID")
                     return
                 }
 
@@ -397,10 +387,6 @@ export const useFileStore = create<FileStoreState>()(
                 try {
                     // 1. Actually Save to Backend Disk
                     await projectService.saveFileContent(Number(currentInstanceId), normalizedPath, code)
-
-                    console.group(`%c[Store] 💾 API SAVED: "${normalizedPath}"`, "color:#7c6aff;font-weight:bold;font-size:12px")
-                    console.log("%cChange Detected:", "color:#3b82f6", projectFiles[path]?.code !== code)
-                    console.groupEnd()
 
                     // 2. Update Local State to reflect it is clean
                     get().updateFile(normalizedPath, code)
@@ -413,8 +399,7 @@ export const useFileStore = create<FileStoreState>()(
                     // 3. Trigger preview refresh
                     get().refreshPreview()
                 } catch (err) {
-                    console.error(`[Store] Failed to save file ${normalizedPath} to backend:`, err)
-                    // TODO: Could show a toast notification here in the future
+                    // Failed to save file
                 } finally {
                     set({ isSaving: false })
                 }
@@ -426,7 +411,6 @@ export const useFileStore = create<FileStoreState>()(
                 if (!paths.length) return
 
                 if (!currentInstanceId) {
-                    console.error("[Store] Cannot save files: no active instance ID")
                     return
                 }
 
@@ -442,15 +426,13 @@ export const useFileStore = create<FileStoreState>()(
                         })
                     )
 
-                    console.log("[Store] saveAllFiles → ✅ Success:", paths)
-                    
                     // Clear all dirty buffers
                     set({ editorBuffers: {} })
 
                     // Trigger preview refresh
                     get().refreshPreview()
                 } catch (err) {
-                    console.error("[Store] saveAllFiles → ❌ Failed:", err)
+                    // Failed to save all files
                 } finally {
                     set({ isSaving: false })
                 }
@@ -461,7 +443,6 @@ export const useFileStore = create<FileStoreState>()(
                 const payload: Record<string, string> = {}
                 changes.forEach(({ filePath, proposedCode }) => {
                     const normalized = normalizePath(filePath)
-                    console.log(`[Store] applyAIChanges → "${normalized}"`)
                     get().updateFile(normalized, proposedCode)
                     payload[normalized] = proposedCode
                 })
@@ -479,8 +460,6 @@ export const useFileStore = create<FileStoreState>()(
 
                 const { filePath, proposedCode } = suggestedChanges
 
-                console.log(`%c[Store] 🤖 AI Accept → Buffer for "${filePath}"`, "color:#f59e0b;font-weight:bold")
-
                 // IMPORTANT: We do NOT update VFS here. 
                 // We only put it in the buffer so it appears in the editor as "unsaved".
                 set(s => ({
@@ -491,7 +470,6 @@ export const useFileStore = create<FileStoreState>()(
             },
 
             rejectSuggestions: () => {
-                console.log("[Store] rejectSuggestions")
                 set({ suggestedChanges: null })
             },
 

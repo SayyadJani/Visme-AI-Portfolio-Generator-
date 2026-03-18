@@ -5,8 +5,18 @@ import { useFileStore } from "./fileStore"
 import BuilderLayout from "./builderLayout"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
-    ArrowLeft, Globe, Download, Share2, Rocket, Settings, Wifi, Loader2
+    ArrowLeft, Globe, Download, Share2, Rocket, Settings, Wifi, Loader2, ChevronDown, Monitor, Code
 } from "lucide-react"
+import { projectService } from "@/services/project.service"
+import { useSnackbar } from "notistack"
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+    DropdownMenuLabel
+} from "@/components/ui/dropdown-menu"
 
 function TopNav() {
     const router = useRouter()
@@ -21,6 +31,25 @@ function TopNav() {
                 document.exitFullscreen()
                 setIsFullscreen(false)
             }
+        }
+    }
+
+    const currentInstanceId = useFileStore(s => s.currentInstanceId)
+    const { enqueueSnackbar } = useSnackbar()
+    const [isOpeningVSCode, setIsOpeningVSCode] = React.useState(false)
+
+    const handleOpenVSCode = async () => {
+        if (!currentInstanceId) return
+        try {
+            setIsOpeningVSCode(true)
+            const id = parseInt(currentInstanceId)
+            const diskPath = await projectService.getDiskPath(id)
+            window.location.href = `vscode://file/${diskPath}`
+            enqueueSnackbar("Launching VS Code...", { variant: "info" })
+        } catch (err) {
+            enqueueSnackbar("Failed to locate local instance files.", { variant: "error" })
+        } finally {
+            setIsOpeningVSCode(false)
         }
     }
 
@@ -71,6 +100,35 @@ function TopNav() {
 
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1 bg-[#16161a] p-1 rounded-lg border border-[#1c1c22]">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="flex items-center gap-2 px-3 py-1 hover:bg-[#1c1c22] rounded-md text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-white transition-all">
+                                <Monitor className="w-3.5 h-3.5" />
+                                {isOpeningVSCode ? "Locating..." : "IDE"}
+                                <ChevronDown className="w-3 h-3 opacity-50" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-48 p-2 rounded-xl bg-[#0d0d10]/95 backdrop-blur-xl border-[#1c1c22] shadow-2xl" align="end" sideOffset={10}>
+                            <DropdownMenuLabel className="text-[8px] font-black uppercase tracking-[0.2em] opacity-40 px-2 py-1.5 text-white">Switch Environment</DropdownMenuLabel>
+                            <DropdownMenuItem 
+                                onSelect={() => {}} 
+                                className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer bg-indigo-500/10 text-indigo-400"
+                            >
+                                <Monitor className="w-3.5 h-3.5" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Antigravity (Active)</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-[#1c1c22] my-1" />
+                            <DropdownMenuItem 
+                                onClick={handleOpenVSCode}
+                                disabled={isOpeningVSCode}
+                                className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer hover:bg-blue-500/10 text-muted-foreground hover:text-blue-400 transition-colors"
+                            >
+                                <Code className="w-3.5 h-3.5" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">VS Code</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <button
                         onClick={toggleFullscreen}
                         className="p-1.5 hover:bg-[#1c1c22] rounded-md text-muted-foreground hover:text-foreground transition-all duration-200"
@@ -158,12 +216,14 @@ function StatusBar() {
 }
 
 export default function Builder() {
+    const router = useRouter()
     const currentInstanceId = useFileStore(s => s.currentInstanceId)
     const instances = useFileStore(s => s.instances)
     const projectFiles = useFileStore(s => s.projectFiles)
     const startPreview = useFileStore(s => s.startPreview)
     const stopPreview = useFileStore(s => s.stopPreview)
     const setCurrentInstance = useFileStore(s => s.setCurrentInstance)
+    const loadError = useFileStore(s => s.loadError)
 
     const currentInstance = currentInstanceId ? instances[currentInstanceId] : null
     const hasFiles = Object.keys(projectFiles).length > 0
@@ -175,7 +235,6 @@ export default function Builder() {
         // 1. URL Sensing: If we have a projectId in URL but it's not the current one, switch.
         // This handles both initial load and manual URL changes.
         if (urlProjectId && urlProjectId !== currentInstanceId) {
-            console.log("[Builder] URL sensed project:", urlProjectId)
             setCurrentInstance(urlProjectId)
         }
     }, [urlProjectId, currentInstanceId, setCurrentInstance])
@@ -192,11 +251,10 @@ export default function Builder() {
 
             // 2. Persistence recovery (Redis-backed)
             if (!currentInst || !hasProjectFiles) {
-                console.log("[Builder] 🔄 Persistence recovery: Fetching instance data for", currentInstanceId)
                 await setCurrentInstance(currentInstanceId)
             }
             
-            if (mounted) {
+            if (mounted && !useFileStore.getState().loadError) {
                 // Data is here, start the preview
                 startPreview()
             }
@@ -210,6 +268,36 @@ export default function Builder() {
             stopPreview()
         }
     }, [currentInstanceId, setCurrentInstance, startPreview, stopPreview])
+
+    if (loadError) {
+        return (
+            <div className="h-screen w-screen bg-[#0b0b0e] flex flex-col items-center justify-center gap-6 p-6 text-center">
+                <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
+                    <Rocket className="w-10 h-10 text-red-500/40" />
+                </div>
+                <div className="space-y-2">
+                    <p className="text-sm font-black uppercase tracking-[0.2em] text-red-400">Workspace Error</p>
+                    <p className="max-w-md text-[11px] text-muted-foreground bg-[#16161a] p-4 rounded-xl border border-red-500/20 font-mono italic">
+                        {loadError}
+                    </p>
+                </div>
+                <div className="flex flex-col gap-3">
+                    <button 
+                        onClick={() => setCurrentInstance(currentInstanceId!)}
+                        className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20"
+                    >
+                        Retry Loading
+                    </button>
+                    <button 
+                        onClick={() => router.push('/dashboard/portfolios')}
+                        className="px-6 py-2.5 bg-[#1c1c22] hover:bg-[#2a2a30] text-muted-foreground hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                        Back to Portfolios
+                    </button>
+                </div>
+            </div>
+        )
+    }
 
     if (!currentInstanceId) {
         return (

@@ -159,6 +159,21 @@ export class ProjectController {
     } catch (err) { next(err); }
   };
 
+  // GET /api/projects/:id/disk-path
+  static getDiskPath = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      if (isNaN(projectId)) return next(new ValidationError({ id: ['Invalid project ID'] }));
+
+      const project = await prisma.project.findFirst({
+        where: { id: projectId, userId: Number(req.user!.userId) }
+      });
+
+      if (!project) throw new NotFoundError('Project');
+      sendSuccess(res, { diskPath: project.diskPath });
+    } catch (err) { next(err); }
+  };
+
   // GET /api/projects/storage-status
   static getStorageStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {

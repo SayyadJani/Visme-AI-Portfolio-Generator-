@@ -7,10 +7,12 @@ interface AuthState {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  _hasHydrated: boolean;
   
   setAuth: (user: UserDTO, accessToken: string) => void;
   clearAuth: () => void;
   setLoading: (isLoading: boolean) => void;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -20,6 +22,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       isAuthenticated: false,
       isLoading: false,
+      _hasHydrated: false,
 
       setAuth: (user, accessToken) => {
         set({ 
@@ -40,11 +43,13 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setLoading: (isLoading) => set({ isLoading }),
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
       name: 'auth-storage',
-      // We only want to persist part of the state to localStorage if needed
-      // (Refresh token is usually in HttpOnly cookie, so we don't need a lot here)
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
       partialize: (state) => ({ 
         user: state.user, 
         isAuthenticated: state.isAuthenticated,

@@ -16,7 +16,7 @@ const features = [
 ]
 
 interface TemplateSelectionStepProps {
-    onContinue: (templateId: string) => void
+    onContinue: (template: TemplateDTO) => void
 }
 
 export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps) => {
@@ -49,42 +49,51 @@ export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps
         if (!selectedTemplate && fallback) {
             setSelectedTemplate({ ...fallback, previewImage: fallback.thumbUrl || "/placeholder.png" } as any)
         }
-        onContinue(displayTemplate.id)
+        onContinue(displayTemplate)
     }
 
     return (
-        <div className="space-y-12 max-w-4xl mx-auto">
-            <div className="space-y-4 text-center lg:text-left">
-                <h2 className="text-3xl font-black tracking-tight">Step 1: Template Selection</h2>
-                <p className="text-muted-foreground font-medium">Confirm the aesthetic foundation of your portfolio.</p>
+        <div className="space-y-10 max-w-6xl mx-auto flex flex-col items-center">
+            <div className="relative group text-center">
+                <div className="absolute -inset-2 bg-primary/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <h2 className="relative text-3xl font-black uppercase tracking-tighter leading-none italic">
+                    <span className="text-primary italic">01.</span> Confirm Foundation
+                </h2>
+                <p className="mt-2 text-[10px] text-muted-foreground font-black uppercase tracking-[0.4em] opacity-40">Architectural Aesthetic Discovery</p>
             </div>
 
             <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="clay-surface overflow-hidden group shadow-2xl relative"
+                className="clay-surface overflow-hidden group shadow-2xl relative w-full border border-primary/20 hover:border-primary/50 transition-all duration-500 rounded-[2rem]"
             >
-                <div className="aspect-video overflow-hidden border-none cursor-default">
+                <div className="aspect-[21/9] overflow-hidden border-none cursor-default relative">
                     <Image
                         src={displayTemplate.previewImage || displayTemplate.thumbUrl || "/placeholder.png"}
                         alt={displayTemplate.name}
                         width={1200}
-                        height={675}
+                        height={514}
                         className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                         priority
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                    
+                    {/* Tech Overlays */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] z-10 pointer-events-none opacity-20" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(theme(colors.background),0.4)_100%)] z-10 pointer-events-none" />
                 </div>
 
-                <div className="absolute bottom-10 left-10 space-y-4 pr-10">
-                    <div className="px-3 py-1 bg-primary text-primary-foreground rounded-lg text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-2">
+                <div className="absolute bottom-10 left-10 space-y-4 z-20">
+                    <div className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2 shadow-[0_0_15px_rgba(theme(colors.primary),0.4)]">
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        Selected Template
+                        Selected Blueprint
                     </div>
-                    <h3 className="text-4xl font-black text-white tracking-tighter">{displayTemplate.name}</h3>
-                    <p className="text-white/70 max-w-xl font-medium leading-relaxed">
-                        {displayTemplate.description}
-                    </p>
+                    <div className="space-y-1">
+                        <h3 className="text-4xl font-black text-foreground tracking-tighter uppercase italic leading-none">{displayTemplate.name}</h3>
+                        <p className="text-muted-foreground/80 max-w-lg text-xs font-medium leading-relaxed">
+                            {displayTemplate.description}
+                        </p>
+                    </div>
                 </div>
 
                 {/* Change Template link */}
@@ -99,21 +108,21 @@ export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps
                 </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-3 gap-6 w-full">
                 {features.map((f, i) => (
                     <motion.div
                         key={f.title}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 + 0.3 }}
-                        className="clay-surface bg-muted/20 p-6 space-y-4 border-border/50"
+                        className="bg-muted/10 backdrop-blur-xl p-6 space-y-4 border border-border/50 rounded-[1.5rem] group/card hover:border-primary/40 transition-all hover:bg-muted/20"
                     >
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover/card:scale-110 group-hover/card:shadow-[0_0_15px_rgba(theme(colors.primary),0.3)] transition-all">
                             <f.icon className="w-5 h-5" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-sm font-black tracking-tight">{f.title}</p>
-                            <p className="text-xs text-muted-foreground font-medium leading-relaxed">{f.desc}</p>
+                            <p className="text-xs font-black uppercase tracking-widest">{f.title}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium leading-tight opacity-70">{f.desc}</p>
                         </div>
                     </motion.div>
                 ))}
@@ -121,10 +130,12 @@ export const TemplateSelectionStep = ({ onContinue }: TemplateSelectionStepProps
 
             <button
                 onClick={handleContinue}
-                className="w-full clay-button h-16 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-sm hover:shadow-2xl hover:shadow-primary/30 active:scale-95 flex items-center justify-center gap-3"
+                className="group relative w-full h-16 bg-primary text-primary-foreground font-black uppercase tracking-[0.4em] text-xs active:scale-[0.98] transition-all rounded-2xl shadow-[0_10px_30px_rgba(theme(colors.primary),0.2)] overflow-hidden"
             >
-                Confirm Template & Continue
-                <ArrowRight className="w-5 h-5" />
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex items-center justify-center gap-4">
+                    Confirm Blueprint & Deploy <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
             </button>
         </div>
     )

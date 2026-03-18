@@ -10,6 +10,7 @@ const STARTUP_TIMEOUT_MS = 300_000;
 export class PreviewService {
   private static server2Url = process.env.SERVER2_URL || 'http://localhost:3002';
   private static secret = process.env.SERVER2_INTERNAL_SECRET || 'secret';
+  private static runtimeHost = process.env.RUNTIME_PUBLIC_HOST || '127.0.0.1';
 
   static async startPreview(projectId: number, userId: number): Promise<AssignRuntimeResponse> {
     const project = await prisma.project.findUnique({ where: { id: projectId } });
@@ -40,7 +41,7 @@ export class PreviewService {
 
       return {
         ...runtimeData,
-        previewUrl: `http://127.0.0.1:${runtimeData.port}`
+        previewUrl: `http://${this.runtimeHost}:${runtimeData.port}`
       };
     } catch (error: any) {
       const server2Error = error.response?.data?.message || error.message;
@@ -86,7 +87,7 @@ export class PreviewService {
     return {
       isActive: !!port,
       port,
-      previewUrl: port ? `http://127.0.0.1:${port}` : null
+      previewUrl: port ? `http://${this.runtimeHost}:${port}` : null
     };
   }
 }

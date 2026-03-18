@@ -13,6 +13,7 @@ export interface Template {
     tags?: string[];
     previews?: string[];
     badge?: "New" | "Popular";
+    gitRepoUrl?: string;
 }
 
 interface TemplateStore {

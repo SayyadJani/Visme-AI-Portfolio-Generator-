@@ -51,4 +51,11 @@ export const authService = {
     const response = await apiClient.post('/auth/refresh');
     return response.data;
   },
+  /**
+   * Update user workspace path
+   */
+  updateWorkspace: async (workspacePath: string) => {
+    const response = await apiClient.put<UserDTO>('/users/workspace', { workspacePath });
+    return response.data;
+  },
 };

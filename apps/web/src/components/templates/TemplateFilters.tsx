@@ -20,7 +20,7 @@ export const TemplateFilters = ({
     onCategoryChange
 }: TemplateFiltersProps) => {
     return (
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 pt-12 border-t border-border/10">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-8 border-t border-border/10">
             <div className="flex items-center gap-4 overflow-x-auto pb-4 lg:pb-0 hide-scrollbar py-2">
                 <div className="flex items-center gap-3 text-muted-foreground mr-6 shrink-0">
                     <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center">

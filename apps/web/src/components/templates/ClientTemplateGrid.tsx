@@ -7,6 +7,7 @@ import { TemplateDTO } from "@repo/types"
 import { TemplateCard } from "@/components/templates/TemplateCard"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSnackbar } from "notistack"
 
 interface ClientTemplateGridProps {
     isAdmin?: boolean
@@ -29,6 +30,7 @@ export function ClientTemplateGrid({
     const [internalSearch, setInternalSearch] = useState("")
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const { enqueueSnackbar } = useSnackbar()
 
     useEffect(() => {
         const fetchTemplates = async () => {
@@ -37,14 +39,13 @@ export function ClientTemplateGrid({
                 setTemplates(data)
                 onLoad?.(data)
             } catch (err) {
-                console.error("Failed to fetch templates", err)
                 setError("Failed to load templates. Please try again later.")
             } finally {
                 setLoading(false)
             }
         }
         fetchTemplates()
-    }, [onLoad])
+    }, []) // Removing onLoad from deps to avoid infinite loops and triggering fetch
 
     const combinedSearch = (internalSearch + " " + externalSearch).trim().toLowerCase()
     
@@ -66,12 +67,25 @@ export function ClientTemplateGrid({
         if (!isAdmin || !adminKey) return
         if (!confirm("Are you sure you want to delete this template? This action cannot be undone.")) return
 
+        // Proactive Key Verification
+        const isKeyValid = await templateService.verifyKey(adminKey)
+        if (!isKeyValid) {
+            enqueueSnackbar("Authentication Failed: Invalid Admin Secret Signature.", { 
+                variant: "error",
+                style: { background: "#ef4444", color: "white", borderRadius: "12px", fontFamily: "monospace", fontSize: "12px", textTransform: "uppercase" }
+            })
+            return
+        }
+
         try {
             await templateService.deleteTemplate(id, adminKey)
             setTemplates(templates.filter(t => t.id !== id))
-        } catch (err) {
-            console.error("Failed to delete template", err)
-            alert("Failed to delete template. it might be in use by projects.")
+            enqueueSnackbar("Template successfully deleted.", { variant: "success", style: { background: "#10b981", color: "white", borderRadius: "12px", fontFamily: "monospace", fontSize: "12px", textTransform: "uppercase" } })
+        } catch (err: any) {
+            const msg = err.response?.status === 401 || err.response?.status === 403 
+                ? "Invalid Admin Key. Access Denied." 
+                : "Failed to delete template. it might be in use by projects.";
+            enqueueSnackbar(msg, { variant: "error", style: { background: "#ef4444", color: "white", borderRadius: "12px", fontFamily: "monospace", fontSize: "12px", textTransform: "uppercase" } })
         }
     }
 

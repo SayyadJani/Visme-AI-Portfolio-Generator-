@@ -16,8 +16,6 @@ import { NotFoundError, AppError } from '@repo/shared-utils';
 import { logger } from '@repo/shared-utils';
 import { checkDiskSpace } from '../utils/disk.util';
 
-const INSTANCES_ROOT = path.resolve(process.env.INSTANCES_PATH ?? 'data/instances');
-
 // Folders to skip when building file tree or taking snapshots
 const SKIP_DIRS = new Set([
   'node_modules',
@@ -28,6 +26,11 @@ const SKIP_DIRS = new Set([
   'build',
   '.next',
 ]);
+
+async function getUserWorkspacePath(userId: number): Promise<string> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { workspacePath: true } });
+  return user?.workspacePath ?? path.resolve(process.env.INSTANCES_PATH ?? 'data/instances');
+}
 
 // ── HELPER: Path traversal prevention ──────────────────────────────────────────
 // Ensures the resolved file path stays inside the project's disk folder.
@@ -49,12 +52,10 @@ function toProjectDTO(project: any): ProjectDTO {
     name:         project.name,
     templateId:   project.templateId,
     status:       project.status,
-    // installStatus removed
     previewUrl:   project.previewUrl,
     lastSavedAt:  project.lastSavedAt,
     lastOpenedAt: project.lastOpenedAt,
     createdAt:    project.createdAt,
-    // diskPath intentionally excluded — never sent to client
   };
 }
 
@@ -118,8 +119,6 @@ async function ensureProjectDiskState(project: any): Promise<void> {
   }
 }
 
-// ── HELPER: Build recursive file tree ─────────────────────────────────────────
-
 function buildFileTree(dir: string, baseDir: string): FileNode[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   const nodes: FileNode[] = [];
@@ -146,18 +145,11 @@ function buildFileTree(dir: string, baseDir: string): FileNode[] {
     }
   }
 
-  // folders first, then files, both alphabetically
   return nodes.sort((a, b) => {
     if (a.type === b.type) return a.name.localeCompare(b.name);
     return a.type === 'dir' ? -1 : 1;
   });
 }
-
-
-// ════════════════════════════════════════════════════════════════════════════════
-// 1. getTemplates()
-// GET /api/projects/templates
-// ════════════════════════════════════════════════════════════════════════════════
 
 export async function getTemplates(): Promise<TemplateDTO[]> {
   const cached = await RedisService.getCachedTemplates();
@@ -171,104 +163,65 @@ export async function getTemplates(): Promise<TemplateDTO[]> {
     orderBy: { createdAt: 'asc' },
     select: {
       id: true, name: true, slug: true, description: true,
-      techStack: true, domain: true, thumbUrl: true, isActive: true,
+      techStack: true, domain: true, thumbUrl: true, previews: true, isActive: true,
       gitRepoUrl: true, createdAt: true, updatedAt: true,
     },
   });
 
   await RedisService.setCachedTemplates(JSON.stringify(templates));
-  logger.info(`${templates.length} templates cached in Redis`, undefined, 'project-service');
   return templates;
 }
-
-
-// ════════════════════════════════════════════════════════════════════════════════
-// 2. createProjectInstance()
-// POST /api/projects/create
-// ════════════════════════════════════════════════════════════════════════════════
-// CHANGED: removed pnpm install entirely.
-// Now only does: INSERT row → git clone → delete .git → mark READY
-// Total time: ~3–5 seconds (was ~15–20 seconds)
-// npm install will happen in the runtime container on first preview start.
 
 export async function createProjectInstance(
   userId:     number,
   templateId: string,
   name?:      string
 ): Promise<ProjectDTO> {
-
-  // 1. Load template — verify it exists and is active
   const template = await prisma.template.findUnique({ where: { id: templateId } });
   if (!template || !template.isActive) {
     throw new NotFoundError('Template');
   }
 
-  // 2. Insert project row — get back the auto-incremented ID
-  //    Status starts at CREATING so UI can show loading state
-  //    No installStatus field anymore
   const project = await prisma.project.create({
     data: {
       userId,
       templateId,
       name:     name ?? template.name,
-      diskPath: '',          // placeholder — filled after we know the id
+      diskPath: '',          
       status:   'CREATING',
-      // installStatus intentionally not set — field removed from model
     },
   });
 
-  // 3. Build disk path now that we have the project id
-  const diskPath = path.join(INSTANCES_ROOT, String(userId), String(project.id));
+  const rootPath = await getUserWorkspacePath(userId);
+  const diskPath = path.join(rootPath, String(userId), String(project.id));
 
-  // 4. Update diskPath in DB
   await prisma.project.update({
     where: { id: project.id },
     data:  { diskPath },
   });
 
-  // 5. Create instance folder on disk
   if (!fs.existsSync(diskPath)) {
     fs.mkdirSync(diskPath, { recursive: true });
   }
-  logger.info(`Created instance folder: ${diskPath}`, undefined, 'project-service');
 
   try {
-    // 6. Git clone the template repo
-    //    --depth 1        = shallow clone, only latest commit (fast, lightweight)
-    //    --single-branch  = only default branch
-    //    node_modules is NOT in the repo, so clone is small (just source files)
-    logger.info(`Cloning ${template.gitRepoUrl}`, undefined, 'project-service');
     execSync(
       `git clone --depth 1 --single-branch "${template.gitRepoUrl}" "${diskPath}"`,
       {
-        timeout: 60_000,   // 60s max for slow connections
-        stdio:   'pipe',   // suppress git output from server logs
+        timeout: 60_000,   
+        stdio:   'pipe',   
       }
     );
 
-    // 7. Delete the .git folder
-    //    The instance is plain files from this point — not a git repo.
-    //    Deleting .git prevents Vite from seeing git internals and prevents
-    //    the user's edits appearing as uncommitted changes to your template.
     const gitDir = path.join(diskPath, '.git');
     if (fs.existsSync(gitDir)) {
       fs.rmSync(gitDir, { recursive: true, force: true });
     }
 
-    // 8. Mark project as READY
-    //    node_modules does NOT exist yet — that is intentional.
-    //    The runtime container (Server 2) will run npm install
-    //    the first time the user clicks Preview.
     const ready = await prisma.project.update({
       where: { id: project.id },
       data:  { status: 'READY' },
     });
-
-    logger.info(
-      `Project ${project.id} READY — no node_modules yet, container will install on first preview`,
-      undefined,
-      'project-service'
-    );
 
     return toProjectDTO(ready);
 
@@ -276,7 +229,6 @@ export async function createProjectInstance(
     const errorMsg = err.stderr?.toString() || err.message;
     logger.error(`Failed to create project ${project.id}. Git Error: ${errorMsg}`, err, 'project-service');
 
-    // Mark as ERROR — do NOT delete the folder (may help debugging)
     await prisma.project.update({
       where: { id: project.id },
       data:  { status: 'ERROR' },
@@ -285,12 +237,6 @@ export async function createProjectInstance(
     throw new AppError(500, 'Failed to set up project. Please try again.', 'SETUP_FAILED');
   }
 }
-
-
-// ════════════════════════════════════════════════════════════════════════════════
-// 3. getFileTree()
-// GET /api/projects/:id/files
-// ════════════════════════════════════════════════════════════════════════════════
 
 export async function getFileTree(
   projectId: number,
@@ -315,8 +261,6 @@ export async function getFileTree(
   }
 
   const tree = buildFileTree(project.diskPath, project.diskPath);
-
-  // Update lastOpenedAt — fire and forget
   prisma.project.update({
     where: { id: projectId },
     data:  { lastOpenedAt: new Date() },
@@ -324,11 +268,6 @@ export async function getFileTree(
 
   return { projectId, tree };
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 3.5 getFullVfsCached()
-// GET /api/projects/:id/full-vfs
-// ─────────────────────────────────────────────────────────────────────────────
 
 export async function getFullVfsCached(
   projectId: number,
@@ -339,18 +278,14 @@ export async function getFullVfsCached(
   });
   if (!project) throw new NotFoundError('Project');
 
-  // 1. Try Redis cache
   const cached = await RedisService.getCachedFiles(projectId);
   if (cached) {
-    logger.info(`Project ${projectId} VFS served from Redis`, undefined, 'project-service');
     return { projectId, files: JSON.parse(cached) };
   }
 
   await ensureProjectDiskState(project);
 
-  // 2. Fallback to Disk read
   const files: Record<string, string> = {};
-  
   const walk = (dir: string) => {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
@@ -366,19 +301,9 @@ export async function getFullVfsCached(
   };
 
   walk(project.diskPath);
-
-  // 3. Save to Redis
   await RedisService.setCachedFiles(projectId, JSON.stringify(files));
-  logger.info(`Project ${projectId} VFS cached in Redis`, undefined, 'project-service');
-
   return { projectId, files };
 }
-
-
-// ════════════════════════════════════════════════════════════════════════════════
-// 4. getFileContent()
-// GET /api/projects/:id/files/*
-// ════════════════════════════════════════════════════════════════════════════════
 
 export async function getFileContent(
   projectId: number,
@@ -395,9 +320,7 @@ export async function getFileContent(
   }
 
   await ensureProjectDiskState(project);
-
   const fullPath = assertSafePath(project.diskPath, filePath);
-
   if (!fs.existsSync(fullPath)) throw new NotFoundError(`File ${filePath}`);
 
   const stat = fs.statSync(fullPath);
@@ -406,12 +329,6 @@ export async function getFileContent(
   const content = fs.readFileSync(fullPath, 'utf-8');
   return { projectId, filePath, content };
 }
-
-
-// ════════════════════════════════════════════════════════════════════════════════
-// 5. saveFileContent()
-// PUT /api/projects/:id/files/*
-// ════════════════════════════════════════════════════════════════════════════════
 
 export async function saveFileContent(
   projectId: number,
@@ -429,26 +346,17 @@ export async function saveFileContent(
   }
 
   await ensureProjectDiskState(project);
-
   const fullPath = assertSafePath(project.diskPath, filePath);
-
-  // Ensure parent dirs exist (handles new files in new subfolders)
   fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-
-  // THE SAVE — synchronous disk write, Vite chokidar detects this immediately
   fs.writeFileSync(fullPath, content, 'utf-8');
 
-  // Fire-and-forget side effects
   prisma.project.update({
     where: { id: projectId },
     data:  { lastSavedAt: new Date() },
   }).catch(() => {});
 
   RedisService.touchProjectActivity(projectId).catch(() => {});
-
   maybeCreateAutoSnapshot(projectId, project.diskPath).catch(() => {});
-
-  // 4. Invalidate Redis VFS Cache
   RedisService.invalidateFileCache(projectId).catch(() => {});
 
   return { saved: true, filePath };
@@ -472,16 +380,15 @@ export async function createSnapshot(
   label:     string | null
 ): Promise<void> {
   const filesJson: Record<string, string> = {};
-
   const srcDir = path.join(diskPath, 'src');
   if (fs.existsSync(srcDir)) {
     (function walk(dir: string) {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const fullPath = path.join(dir, entry.name);
-        const relPath  = path.relative(diskPath, fullPath);
         if (entry.isDirectory()) {
           if (!SKIP_DIRS.has(entry.name)) walk(fullPath);
         } else {
+          const relPath  = path.relative(diskPath, fullPath);
           filesJson[relPath] = fs.readFileSync(fullPath, 'utf-8');
         }
       }
@@ -516,7 +423,6 @@ export async function listSnapshots(projectId: number, userId: number): Promise<
     select:  {
       id: true, type: true, label: true, fileCount: true, 
       sizeBytes: true, createdAt: true,
-      // filesJson intentionally excluded from list
     },
   });
 }
@@ -538,7 +444,6 @@ export async function restoreSnapshot(
     throw new NotFoundError('Snapshot');
   }
 
-  // Safety: Create PRERESTORE snapshot of current state
   await createSnapshot(projectId, project.diskPath, 'PRERESTORE', `Before restoring snapshot ${snapshotId}`);
 
   const files = snapshot.filesJson as Record<string, string>;
@@ -546,23 +451,14 @@ export async function restoreSnapshot(
 
   for (const [relPath, content] of Object.entries(files)) {
     const fullPath = path.resolve(project.diskPath, relPath);
-    // Safety check
     if (!fullPath.startsWith(project.diskPath + path.sep) && fullPath !== project.diskPath) continue;
-
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
     fs.writeFileSync(fullPath, content, 'utf-8');
     count++;
   }
 
-  logger.info(`Restored snapshot ${snapshotId} for project ${projectId}`, undefined, 'project-service');
   return { restored: true, filesRestored: count };
 }
-
-
-// ════════════════════════════════════════════════════════════════════════════════
-// 6. listUserProjects()
-// GET /api/projects
-// ════════════════════════════════════════════════════════════════════════════════
 
 export async function listUserProjects(userId: number): Promise<ProjectDTO[]> {
   const projects = await prisma.project.findMany({
@@ -572,50 +468,34 @@ export async function listUserProjects(userId: number): Promise<ProjectDTO[]> {
   return projects.map(toProjectDTO);
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// 7. deleteProject()
-// DELETE /api/projects/:id
-// ════════════════════════════════════════════════════════════════════════════════
-
 export async function deleteProject(projectId: number, userId: number): Promise<void> {
   const project = await prisma.project.findFirst({
     where: { id: projectId, userId },
   });
   if (!project) throw new NotFoundError('Project');
 
-  // 1. Delete from database (Prisma handles cascading if configured, or we delete secondary records manually)
-  // delete snapshots first
   await prisma.projectSnapshot.deleteMany({ where: { projectId } });
   
-  // delete deployment histories if any
-  // @ts-ignore - assuming Deployment exists based on context
+  // @ts-ignore
   await prisma.deployment?.deleteMany({ where: { projectId } });
 
   await prisma.project.delete({ where: { id: projectId } });
 
-  // 2. Delete files from disk
   if (project.diskPath && fs.existsSync(project.diskPath)) {
     try {
       fs.rmSync(project.diskPath, { recursive: true, force: true });
-      logger.info(`Deleted project files: ${project.diskPath}`, undefined, 'project-service');
-    } catch (err) {
-      logger.error(`Failed to delete project files for ${projectId}`, err, 'project-service');
-    }
+    } catch (err) {}
   }
 
-  // 3. Clear Redis cache
   await RedisService.invalidateFileCache(projectId);
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// 8. getDiskStatus()
-// ════════════════════════════════════════════════════════════════════════════════
-
-export async function getDiskStatus() {
-  const status = await checkDiskSpace(INSTANCES_ROOT);
+export async function getDiskStatus(userId?: number) {
+  const rootPath = userId ? await getUserWorkspacePath(userId) : path.resolve(process.env.INSTANCES_PATH ?? 'data/instances');
+  const status = await checkDiskSpace(rootPath);
   return {
     ...status,
-    path: INSTANCES_ROOT,
-    isFull: status.free < 100 * 1024 * 1024, // Less than 100MB free
+    path: rootPath,
+    isFull: status.free < 100 * 1024 * 1024, 
   };
 }

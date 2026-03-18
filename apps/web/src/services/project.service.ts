@@ -105,8 +105,14 @@ export const projectService = {
       const response = await apiClient.get('/projects/health/storage');
       return response.data;
     } catch (err) {
-      console.warn("Storage status check failed (Network/Disk Error)", err);
       return null;
     }
+  },
+  /**
+   * Get the disk path of a project (only for local development/integration)
+   */
+  getDiskPath: async (projectId: number): Promise<string> => {
+    const response = await apiClient.get<{ diskPath: string }>(`/projects/${projectId}/disk-path`);
+    return response.data.diskPath;
   },
 };

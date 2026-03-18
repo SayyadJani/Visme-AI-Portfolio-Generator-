@@ -24,10 +24,13 @@ export const ResumeUploadStep = ({ onContinue, onBack }: ResumeUploadStepProps) 
     }
 
     return (
-        <div className="space-y-12 max-w-4xl mx-auto">
-            <div className="space-y-4 text-center lg:text-left">
-                <h2 className="text-3xl font-black tracking-tight">Step 2: Resume Upload</h2>
-                <p className="text-muted-foreground font-medium">Upload your latest PDF resume for our AI to analyze and transform.</p>
+        <div className="space-y-10 max-w-4xl mx-auto flex flex-col items-center">
+            <div className="relative group text-center">
+                <div className="absolute -inset-2 bg-primary/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <h2 className="relative text-3xl font-black uppercase tracking-tighter leading-none italic">
+                    <span className="text-primary italic">02.</span> Neural Data Input
+                </h2>
+                <p className="mt-2 text-[10px] text-muted-foreground font-black uppercase tracking-[0.4em] opacity-40">High-Fidelity Information Extraction</p>
             </div>
 
             <div
@@ -35,29 +38,36 @@ export const ResumeUploadStep = ({ onContinue, onBack }: ResumeUploadStepProps) 
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 className={cn(
-                    "clay-surface min-h-[400px] flex flex-col items-center justify-center p-12 border-2 border-dashed transition-all duration-500 relative overflow-hidden",
-                    isDragging ? "border-primary bg-primary/5 scale-[1.01]" : "border-border/50 hover:border-primary/50",
+                    "clay-surface w-full min-h-[260px] flex flex-col items-center justify-center p-8 border border-primary/20 transition-all duration-700 relative overflow-hidden rounded-[2rem] group",
+                    isDragging ? "bg-primary/10 border-primary scale-[1.02] shadow-[0_0_40px_rgba(theme(colors.primary),0.2)]" : "bg-muted/5 hover:border-primary/40",
                     file ? "bg-emerald-500/5 border-emerald-500/30" : ""
                 )}
             >
+                {/* Techy Scanlines */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.05)_50%)] z-0 pointer-events-none opacity-10 bg-[length:100%_4px]" />
+                
                 <AnimatePresence mode="wait">
                     {!file ? (
                         <motion.div
                             key="empty"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center space-y-6"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="relative z-10 text-center space-y-6"
                         >
-                            <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto text-primary animate-bounce-slow">
-                                <Upload className="w-10 h-10" />
+                            <div className="relative group/icon">
+                                <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full opacity-0 group-hover/icon:opacity-100 transition-opacity animate-pulse" />
+                                <div className="relative w-16 h-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(theme(colors.primary),0.4)]">
+                                    <Upload className="w-8 h-8" />
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <p className="text-xl font-black tracking-tight">Drop your resume here</p>
-                                <p className="text-sm text-muted-foreground font-medium">Supports PDF and DOCX files up to 10MB</p>
+                            <div className="space-y-1">
+                                <p className="text-lg font-black tracking-tight uppercase italic leading-none">Drop Resume Blueprint</p>
+                                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.4em] opacity-40">Neural Extraction Sandbox</p>
                             </div>
-                            <label className="clay-button px-8 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest cursor-pointer hover:shadow-xl hover:shadow-primary/20 transition-all inline-block">
-                                Browse Files
+                            <label className="group relative clay-button px-10 py-3 bg-foreground text-background font-black text-[10px] uppercase tracking-[0.4em] cursor-pointer overflow-hidden transition-all rounded-xl">
+                                <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-10 transition-opacity" />
+                                <span className="relative">Browse Filesystem</span>
                                 <input type="file" className="hidden" accept=".pdf,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} />
                             </label>
                         </motion.div>
@@ -99,47 +109,47 @@ export const ResumeUploadStep = ({ onContinue, onBack }: ResumeUploadStepProps) 
                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-secondary/5 rounded-full blur-3xl -z-10" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-8 bg-muted/20 rounded-[2rem] border border-border/50">
-                <div className="flex gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-background flex items-center justify-center border border-border flex-shrink-0">
-                        <AlertCircle className="w-5 h-5 text-muted-foreground" />
+            <div className="grid grid-cols-2 gap-6 w-full">
+                <div className="bg-muted/10 backdrop-blur-xl p-5 border border-border/50 rounded-[1.5rem] flex gap-4 hover:border-primary/40 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-background border border-border flex items-center justify-center flex-shrink-0">
+                        <AlertCircle className="w-5 h-5 text-muted-foreground/40" />
                     </div>
                     <div className="space-y-1">
-                        <p className="text-sm font-black tracking-tight">Privacy First</p>
-                        <p className="text-xs text-muted-foreground font-medium leading-relaxed">Your resume is parsed in a secure environment and never stored without your explicit permission.</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest leading-none">Vault Security</p>
+                        <p className="text-[9px] text-muted-foreground font-medium leading-tight opacity-60 line-clamp-2">High-fidelity parsing in an isolated sandbox environment. No data retention.</p>
                     </div>
                 </div>
-                <div className="flex gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-background flex items-center justify-center border border-border flex-shrink-0">
-                        <Zap className="w-5 h-5 text-primary" />
+                <div className="bg-muted/10 backdrop-blur-xl p-5 border border-border/50 rounded-[1.5rem] flex gap-4 hover:border-primary/40 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary">
+                        <Zap className="w-5 h-5" />
                     </div>
                     <div className="space-y-1">
-                        <p className="text-sm font-black tracking-tight">AI Precision</p>
-                        <p className="text-xs text-muted-foreground font-medium leading-relaxed">We use specialized LLMs to extract your skills, experience, and projects with 99.8% accuracy.</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest leading-none">LLM Logic</p>
+                        <p className="text-[9px] text-muted-foreground font-medium leading-tight opacity-60 line-clamp-2">Neural matching architecture transforms flat text into structured portfolio logic.</p>
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 w-full">
                 <button
                     onClick={onBack}
-                    className="flex-1 lg:flex-none px-12 h-16 rounded-2xl border border-border font-black uppercase tracking-widest text-xs hover:bg-muted transition-all"
+                    className="flex-1 h-14 rounded-[1.25rem] border border-border font-black uppercase tracking-[0.4em] text-[9px] hover:bg-muted transition-all opacity-40 hover:opacity-100"
                 >
-                    Back
+                    Return
                 </button>
                 <button
                     disabled={!file}
                     onClick={() => {
                         if (file) {
-                            console.log("--- STEP 2: Resume Upload ---")
-                            console.log("File prepared for processing:", file.name)
-                            console.log("----------------------------")
                             onContinue(file)
                         }
                     }}
-                    className="flex-[2] lg:flex-1 clay-button h-16 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-sm hover:shadow-2xl hover:shadow-primary/30 active:scale-95 disabled:opacity-50 disabled:grayscale transition-all"
+                    className="group relative flex-[2] h-14 bg-primary text-primary-foreground font-black uppercase tracking-[0.4em] text-[10px] shadow-[0_10px_30px_rgba(theme(colors.primary),0.2)] active:scale-[0.98] disabled:opacity-50 disabled:grayscale transition-all rounded-[1.25rem] overflow-hidden"
                 >
-                    Process Resume
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="relative flex items-center justify-center gap-3">
+                        Initialize Matching <Zap className="w-4 h-4 group-hover:animate-pulse" />
+                    </span>
                 </button>
             </div>
         </div>

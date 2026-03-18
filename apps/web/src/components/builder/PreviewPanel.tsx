@@ -19,7 +19,6 @@ export default function PreviewPanel() {
     // Automatically Refresh Iframe on Save
     useEffect(() => {
         if (previewRefreshKey > 0 && iframeRef.current && previewUrl) {
-            console.log("[PreviewPanel] 🔄 Change detected, refreshing iframe...")
             const url = new URL(previewUrl)
             url.searchParams.set("t", Date.now().toString())
             iframeRef.current.src = url.toString()
@@ -39,8 +38,8 @@ export default function PreviewPanel() {
     const toggleFullscreen = () => {
         if (!panelRef.current) return
         if (!document.fullscreenElement) {
-            panelRef.current.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable full-screen mode: ${err.message}`)
+            panelRef.current.requestFullscreen().catch(() => {
+                // Ignore FS failure
             })
             setIsFullscreen(true)
         } else {
@@ -146,20 +145,32 @@ export default function PreviewPanel() {
                 )}
 
                 {previewError && (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center">
-                        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-                            <Monitor className="w-8 h-8 text-red-500/40" />
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 text-center bg-[#0b0b0e]">
+                        <div className="w-20 h-20 rounded-[2rem] bg-red-500/5 flex items-center justify-center mb-6 border border-red-500/10">
+                            <Monitor className="w-10 h-10 text-red-500/30" />
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400 mb-2">Startup Failed</p>
-                        <p className="max-w-xs text-[11px] text-muted-foreground bg-[#1c1c22] p-3 rounded border border-red-500/20 font-mono break-words">
-                            {previewError}
+                        <h3 className="text-sm font-black uppercase tracking-[0.3em] text-red-400 mb-3 italic">Runtime Connection Failed</h3>
+                        <p className="max-w-xs text-[10px] text-muted-foreground/60 leading-relaxed mb-6 uppercase tracking-wider font-bold">
+                            The portfolio runtime environment encountered a synchronization delay. This usually happens during heavy dependency installation.
                         </p>
-                        <button 
-                            onClick={() => startPreview()}
-                            className="mt-6 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all"
-                        >
-                            Retry Preview
-                        </button>
+                        <div className="w-full max-w-sm bg-[#16161a] p-4 rounded-2xl border border-white/5 font-mono text-[9px] text-red-400/80 break-words mb-8 text-left shadow-2xl">
+                            <span className="text-muted-foreground/40 mr-2">LOG_ERR:</span>
+                            {previewError}
+                        </div>
+                        <div className="flex flex-col gap-3 w-full max-w-[200px]">
+                            <button 
+                                onClick={() => startPreview()}
+                                className="h-11 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95"
+                            >
+                                Re-sync Environment
+                            </button>
+                            <button 
+                                onClick={() => window.location.reload()}
+                                className="h-11 bg-[#1c1c22] hover:bg-[#2a2a30] text-muted-foreground hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                            >
+                                Force Reload Interface
+                            </button>
+                        </div>
                     </div>
                 )}
 

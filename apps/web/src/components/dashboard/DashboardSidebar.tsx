@@ -12,10 +12,12 @@ import {
     LogOut,
     Settings,
     ShieldCheck,
+    HardDriveIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import React, { useState, memo } from "react"
 import { useAuthStore } from "@/stores/authStore"
+import { useSettingsStore } from "@/stores/settingsStore"
 import { authService } from "@/services/auth.service"
 import { useRouter } from "next/navigation"
 
@@ -33,6 +35,7 @@ export const DashboardSidebar = memo(() => {
     const router = useRouter()
     const [isHovered, setIsHovered] = useState(false)
     const { user, clearAuth } = useAuthStore()
+    const { openWorkspaceDialog } = useSettingsStore()
 
     const handleLogout = async () => {
         try {
@@ -93,6 +96,20 @@ export const DashboardSidebar = memo(() => {
             </nav>
 
             <div className="pt-6 border-t border-border mt-auto space-y-4 py-6 px-3 w-full">
+                <button 
+                    onClick={openWorkspaceDialog}
+                    className="flex items-center gap-4 p-2.5 rounded-2xl bg-primary/5 hover:bg-primary/10 border border-primary/10 transition-all w-full group/settings overflow-hidden relative"
+                >
+                    <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                        <HardDriveIcon className="w-5 h-5 text-primary group-hover/settings:rotate-12 transition-transform" />
+                    </div>
+                    <div className={cn(
+                        "text-left whitespace-nowrap transition-all duration-300",
+                        isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 invisible group-hover:visible"
+                    )}>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary">Workspace</p>
+                    </div>
+                </button>
                 <button className="flex items-center gap-4 p-2.5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all w-full overflow-hidden">
                     <div className="w-8 h-8 rounded-xl overflow-hidden border border-border shadow-sm flex-shrink-0 bg-primary/10 flex items-center justify-center">
                         {user?.name ? (

@@ -182,7 +182,6 @@ export default function FileExplorer() {
     // Re-initialize if currentInstanceId is set but files are missing
     useEffect(() => {
         if (currentInstanceId && paths.length === 0) {
-            console.log("[FileExplorer] Files missing on mount, triggering load...")
             setCurrentInstance(currentInstanceId)
         }
     }, [currentInstanceId])

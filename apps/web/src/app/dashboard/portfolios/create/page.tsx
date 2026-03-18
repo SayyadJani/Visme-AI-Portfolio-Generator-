@@ -10,13 +10,15 @@ import { ParsingStep } from "@/components/portfolio/ParsingStep"
 import { AIProcessingState } from "@/components/portfolio/AIProcessingState"
 import { FileText, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { templates } from "@/data/templates/index"
 import { useTemplateStore, Template } from "@/stores/templateStore"
+import { TemplateDTO } from "@repo/types"
 import { simulateResumeParsing, simulatePortfolioGeneration } from "@/services/simulation"
 import { useFileStore } from "@/components/builder/fileStore"
+import { useSnackbar } from "notistack"
 
 export default function CreatePortfolioPage() {
     const router = useRouter()
+    const { enqueueSnackbar } = useSnackbar()
     const { selectedTemplate, setSelectedTemplate } = useTemplateStore()
     const parsedResume = useFileStore(s => s.parsedResume)
     const storeSetResumeFile = useFileStore(s => s.setResumeFile)
@@ -30,12 +32,12 @@ export default function CreatePortfolioPage() {
 
     const steps = ["Template", "Resume", "Parsing"]
 
-    const handleTemplateSelect = (templateId: string) => {
-        const template = templates.find(t => t.id === templateId)
-        if (template) {
-            setSelectedTemplate(template as Template)
-            setCurrentStep(2)
-        }
+    const handleTemplateSelect = (template: TemplateDTO) => {
+        setSelectedTemplate({
+            ...template,
+            previewImage: template.thumbUrl || "/placeholder.png"
+        } as Template)
+        setCurrentStep(2)
     }
 
     const handleResumeUpload = async (file: File) => {
@@ -48,8 +50,9 @@ export default function CreatePortfolioPage() {
             
             setIsProcessing(false)
             setCurrentStep(3)
-        } catch (error) {
-            console.error("Parsing failed", error)
+        } catch (error: any) {
+            const msg = error.response?.data?.message || error.message || "Logic matching engine failed. Please try a different resume format."
+            enqueueSnackbar(msg, { variant: "error" })
             setIsProcessing(false)
         }
     }
@@ -71,44 +74,56 @@ export default function CreatePortfolioPage() {
 
             // Redirect to builder with projectId query param
             router.push(`/dashboard/portfolios/builder?projectId=${project.id}`)
-        } catch (error) {
-            console.error("Generation failed", error)
+        } catch (error: any) {
+            const msg = error.response?.data?.message || error.message || "Blueprint assembly failed. Our servers might be busy."
+            enqueueSnackbar(msg, { variant: "error" })
             setIsGenerating(false)
         }
     }
+
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" })
+    }, [currentStep, isProcessing, isGenerating])
 
     const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 1))
 
     return (
         <div className={cn(
-            "relative p-8 lg:p-12 mx-auto min-h-screen transition-all duration-500",
-            currentStep === 3 ? "max-w-[1400px]" : "max-w-[1200px] space-y-12"
+            "relative p-4 lg:p-8 mx-auto min-h-screen transition-all duration-700 ease-in-out",
+            currentStep === 3 ? "max-w-screen-2xl" : "max-w-[1400px]"
         )}>
-            {/* Background Ornament */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
+            {/* Ultra-Premium Background Elements */}
+            <div className="absolute inset-0 grid-pattern opacity-[0.05] pointer-events-none" />
+            <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/20 blur-[150px] rounded-full pointer-events-none -translate-y-1/2 animate-pulse" />
+            <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none translate-y-1/2" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,transparent_0%,rgba(theme(colors.background),0.8)_80%)] pointer-events-none" />
 
-            {/* Header: Hide on Step 3 as it has its own header */}
             <AnimatePresence mode="wait">
                 {(currentStep !== 3 || isGenerating) && !isProcessing && !isGenerating && (
                     <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="text-center space-y-4 pt-12"
+                        initial={{ opacity: 0, y: -20, filter: "blur(10px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
+                        className="text-center space-y-2 pt-16 pb-8"
                     >
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: "80px" }}
+                            className="h-1 bg-primary mx-auto mb-6 rounded-full shadow-[0_0_15px_rgba(theme(colors.primary),0.5)]"
+                        />
                         <motion.h1
                             key={currentStep}
-                            className="text-5xl md:text-6xl font-black tracking-tighter"
+                            className="text-4xl md:text-6xl font-black tracking-[calc(-0.05em)] uppercase italic leading-none"
                         >
-                            {currentStep === 1 && "Start Your Journey"}
-                            {currentStep === 2 && "Upload Your Resume"}
+                            {currentStep === 1 && <><span className="text-primary italic">Select</span> Architect</>}
+                            {currentStep === 2 && <><span className="text-primary italic">Feed</span> Neural Data</>}
                         </motion.h1>
                         <motion.p
                             key={`p-${currentStep}`}
-                            className="text-muted-foreground text-lg md:text-xl font-medium"
+                            className="text-muted-foreground text-[10px] md:text-sm font-black uppercase tracking-[0.4em] opacity-40"
                         >
-                            {currentStep === 1 && "Select a base aesthetic for your digital identity."}
-                            {currentStep === 2 && "Our AI will transform your dry resume into a dynamic story."}
+                            {currentStep === 1 && "The Foundation of Digital Identity"}
+                            {currentStep === 2 && "Universal Resume Parsing Engine"}
                         </motion.p>
                     </motion.div>
                 )}
@@ -116,7 +131,7 @@ export default function CreatePortfolioPage() {
 
             {/* Processing Header */}
             {(isProcessing || isGenerating) && (
-                <div className="text-center space-y-4 pt-12">
+                <div className="text-center space-y-4 pt-12 pb-12">
                     <motion.h1 className="text-5xl md:text-6xl font-black tracking-tighter">
                         {isGenerating ? "Generating Portfolio..." : "Processing Logic..."}
                     </motion.h1>
@@ -129,12 +144,14 @@ export default function CreatePortfolioPage() {
             )}
 
             {currentStep !== 3 && !isProcessing && !isGenerating && (
-                <StepIndicator currentStep={currentStep} steps={steps} />
+                <div className="py-8 max-w-md mx-auto">
+                    <StepIndicator currentStep={currentStep} steps={steps} />
+                </div>
             )}
 
             <main className={cn(
-                "min-h-[600px]",
-                currentStep === 3 && !isGenerating ? "pt-0" : ""
+                "flex-1 flex flex-col items-center",
+                currentStep === 3 && !isGenerating ? "pt-0" : "pt-8"
             )}>
                 <AnimatePresence mode="wait">
                     <motion.div
@@ -149,7 +166,7 @@ export default function CreatePortfolioPage() {
                         ) : (
                             <>
                                 {currentStep === 1 && (
-                                    <TemplateSelectionStep onContinue={(id) => handleTemplateSelect(id)} />
+                                    <TemplateSelectionStep onContinue={(tpl) => handleTemplateSelect(tpl as any)} />
                                 )}
                                 {currentStep === 2 && (
                                     <ResumeUploadStep
@@ -189,11 +206,17 @@ export default function CreatePortfolioPage() {
                     </div>
 
                     <div className="flex items-center gap-8">
-                        <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
+                        <button 
+                            onClick={() => enqueueSnackbar("Template source is available in the connected Git repository.", { variant: "info" })}
+                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all"
+                        >
                             <Search className="w-3.5 h-3.5" />
                             View Template Source
                         </button>
-                        <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
+                        <button 
+                            onClick={() => enqueueSnackbar("Parsing guidelines can be found in our documentation portal.", { variant: "info" })}
+                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all"
+                        >
                             <FileText className="w-3.5 h-3.5" />
                             Parsing Guidelines
                         </button>

@@ -7,12 +7,14 @@ import { Testimonial } from "@/components/sections/testimonial"
 import { CTA } from "@/components/sections/cta"
 import { Footer } from "@/components/sections/footer"
 import { BackgroundAnimation } from "@/components/sections/background-animation"
+import { Snowfall } from "@/components/sections/snowfall"
 
 export default function Home() {
   return (
     <div className="relative min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans antialiased overflow-x-hidden">
       {/* Cool Background Animations */}
       <BackgroundAnimation />
+      <Snowfall />
 
       <Navbar />
 

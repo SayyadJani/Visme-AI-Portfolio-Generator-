@@ -35,6 +35,7 @@ router.post('/:id/snapshots', ProjectController.createManualSnapshot);
 router.post('/:id/snapshots/:snapshotId/restore', ProjectController.restore);
 
 // 8. Delete project and system status
+router.get('/:id/disk-path', ProjectController.getDiskPath);
 router.delete('/:id', ProjectController.delete);
 router.get('/health/storage', ProjectController.getStorageStatus);
 

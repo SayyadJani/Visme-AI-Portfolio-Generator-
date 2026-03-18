@@ -1,12 +1,15 @@
 "use client"
 
 import React, { memo } from "react"
-import { Search, Bell, Command, Settings, Sparkles } from "lucide-react"
+import { Search, Bell, Command, Settings, Sparkles, LogOut } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Link from "next/link"
+import { useAuthStore } from "@/stores/authStore"
 
 export const DashboardNavbar = memo(() => {
+    const clearAuth = useAuthStore(s => s.clearAuth)
+
     return (
         <nav className="h-20 border-b border-border bg-background/80 backdrop-blur-xl absolute top-0 left-0 right-0 px-8 flex items-center justify-between z-[60]">
             {/* Brand Logo */}
@@ -51,6 +54,13 @@ export const DashboardNavbar = memo(() => {
                     <Link href="/dashboard/profile" className="w-10 h-10 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border flex items-center justify-center transition-all group active:scale-95">
                         <Settings className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-all group-hover:rotate-90 duration-500" />
                     </Link>
+                    <button 
+                        onClick={() => clearAuth()}
+                        className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center transition-all group active:scale-95"
+                        title="Logout"
+                    >
+                        <LogOut className="w-4 h-4 text-red-500/60 group-hover:text-red-500" />
+                    </button>
                 </div>
             </div>
         </nav>

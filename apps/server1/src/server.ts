@@ -9,6 +9,7 @@ import resumeRoutes from './routes/resume.routes';
 import deployRoutes from './routes/deploy.routes';
 import previewRoutes from './routes/preview.routes';
 import { adminRoutes } from './routes/admin.routes';
+import userRoutes from './routes/user.routes';
 
 import { errorHandler } from './middleware/errorHandler.middleware';
 import { RedisService } from './services/redis.service';
@@ -43,6 +44,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/deploy', deployRoutes);
 app.use('/api/preview', previewRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check route

@@ -10,7 +10,7 @@ import { motion } from "framer-motion"
 
 function TemplatesHeader() {
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -59,10 +59,10 @@ export default function TemplatesPage() {
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 blur-[130px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/3" />
             <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none translate-y-1/2 -translate-x-1/4" />
 
-            <div className="relative p-8 lg:p-16 space-y-20 max-w-[1600px] mx-auto pb-32">
+            <div className="relative p-4 lg:p-8 space-y-10 max-w-[1600px] mx-auto pb-32">
                 <TemplatesHeader />
                 
-                <div className="space-y-12">
+                <div className="space-y-4">
                     <TemplateStats />
                     <TemplateFilters 
                         search={search}
@@ -72,7 +72,7 @@ export default function TemplatesPage() {
                     />
                 </div>
                 
-                <div className="pt-8">
+                <div className="pt-6">
                     <ClientTemplateGrid 
                         externalSearch={search}
                         activeCategory={activeCategory}

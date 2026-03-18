@@ -17,13 +17,18 @@ export class ResumeController {
         });
       }
 
-      const { userId } = req.user!;
-      const filePath = req.file.path;
-      const parsed = await ResumeService.parseOnly(filePath);
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: { message: 'Unauthorized', code: 'UNAUTHORIZED' }
+        });
+      }
+      const parsed = await ResumeService.parseOnly(req.file.path);
       const resume = await ResumeService.saveParsedData(userId, parsed);
 
       return sendSuccess(res, { resumeId: resume.id, parsed });
-    } catch (error) {
+    } catch (error: any) {
       next(error);
     }
   }
@@ -71,7 +76,7 @@ export class ResumeController {
       }
 
       await ResumeService.applyToProject(userId, Number(resumeId), projectId);
-      
+
       return sendSuccess(res, { applied: true });
     } catch (error) {
       next(error);

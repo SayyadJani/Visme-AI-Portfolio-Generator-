@@ -3,6 +3,20 @@ import { TemplateDTO } from '@repo/types';
 
 export const templateService = {
   /**
+   * Verify admin key
+   */
+  verifyKey: async (adminKey: string): Promise<boolean> => {
+    try {
+      await apiClient.post('/admin/verify', {}, {
+        headers: { 'x-admin-key': adminKey }
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
    * Upload a new template (Admin)
    */
   uploadTemplate: async (formData: FormData, adminKey?: string): Promise<{ template: TemplateDTO }> => {

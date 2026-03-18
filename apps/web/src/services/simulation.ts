@@ -9,7 +9,6 @@ import { VirtualFileSystem, normalizeBackendFiles } from "@/components/builder/f
 export const simulateResumeParsing = async (file: File): Promise<ReconciliationData> => {
     return new Promise((resolve) => {
         setTimeout(() => {
-            console.log("Simulated: Resume parsed", file.name);
             // We return a slightly modified version of the mock data to show it "worked"
             resolve({
                 ...MOCK_RECONCILIATION_DATA,
@@ -31,8 +30,6 @@ export const simulatePortfolioGeneration = async (
 ): Promise<VirtualFileSystem> => {
     return new Promise((resolve) => {
         setTimeout(() => {
-            console.log("Simulated: Portfolio generated for", template.id);
-
             // Ensure files are in VFS format
             let generatedFiles: VirtualFileSystem;
             const files = template.files as any;

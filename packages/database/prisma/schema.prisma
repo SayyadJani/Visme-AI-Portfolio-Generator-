@@ -32,6 +32,7 @@ model User {
   email        String       @unique
   passwordHash String
   name         String
+  workspacePath String?     // e.g. "C:\Users\JANI PASHA\Portfolios"
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   projects     Project[]

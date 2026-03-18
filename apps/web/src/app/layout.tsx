@@ -4,6 +4,7 @@ import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SnackbarProvider } from "@/components/providers/snackbar-provider";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
   description: "AI-powered portfolio generation for developers",
 };
 
-// import { AuthProvider } from "@/components/providers/auth-provider";
+import AuthGuard from "@/components/auth/AuthGuard";
 
 export default function RootLayout({
   children,
@@ -36,16 +37,18 @@ export default function RootLayout({
         geistSans.variable,
         geistMono.variable
       )}>
-        {/* <AuthProvider> */}
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <SnackbarProvider>
+            <AuthGuard>
+              {children}
+            </AuthGuard>
+          </SnackbarProvider>
         </ThemeProvider>
-        {/* </AuthProvider> */}
       </body>
     </html>
   );

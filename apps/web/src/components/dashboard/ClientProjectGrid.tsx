@@ -62,6 +62,7 @@ export function ClientProjectGrid() {
                         lastEdited={item.lastSavedAt ? new Date(item.lastSavedAt).toLocaleDateString() : "Never"}
                         views={0}
                         imageUrl={undefined}
+                        previewUrl={item.previewUrl}
                         delay={0.1 + i * 0.1} 
                         onDelete={(deletedId) => setProjects(prev => prev.filter(p => p.id !== deletedId))}
                     />

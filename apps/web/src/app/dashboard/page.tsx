@@ -9,7 +9,7 @@ import { TipCard } from "@/components/dashboard/TipCard"
 
 export default function DashboardHome() {
     return (
-        <div className="relative p-8 lg:p-12 space-y-16 max-w-[1600px] mx-auto min-h-screen">
+        <div className="relative p-4 lg:p-8 space-y-16 max-w-[1600px] mx-auto min-h-screen">
             {/* Decorative Blur Backgrounds - Static CSS only */}
             <div className="absolute top-0 right-[-10%] w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] -z-10 pointer-events-none" />
             <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[120px] -z-10 pointer-events-none" />

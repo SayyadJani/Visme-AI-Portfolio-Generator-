@@ -133,22 +133,5 @@ export function validateTemplate(files: VirtualFileSystem): ValidationResult {
  */
 export function validateAndLog(files: VirtualFileSystem): ValidationResult {
     const result = validateTemplate(files)
-    
-    if (result.errors.length > 0) {
-        console.group("🔴 [Template Validation] ERRORS — preview will be blank")
-        result.errors.forEach(e => console.error(" •", e))
-        console.groupEnd()
-    }
-    
-    if (result.warnings.length > 0) {
-        console.group("🟡 [Template Validation] WARNINGS")
-        result.warnings.forEach(w => console.warn(" •", w))
-        console.groupEnd()
-    }
-
-    if (result.valid && result.warnings.length === 0) {
-        console.log("✅ [Template Validation] All checks passed")
-    }
-
     return result
 }

@@ -29,7 +29,7 @@ export async function checkDiskSpace(directoryPath: string): Promise<DiskSpace> 
                 }
             }
         } catch (err) {
-            console.error('Failed to check disk space on Windows', err);
+            // Failed to check disk space
         }
         // If Windows check fails, fall through to returning dummy data
     } else {
@@ -45,7 +45,7 @@ export async function checkDiskSpace(directoryPath: string): Promise<DiskSpace> 
                 }
             }
         } catch (err) {
-            console.error('Failed to check disk space on Linux', err);
+            // Failed to check disk space
         }
     }
 

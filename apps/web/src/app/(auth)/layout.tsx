@@ -1,7 +1,10 @@
+"use client";
+
 import * as React from "react"
 import Link from "next/link"
-import { Sparkles } from "lucide-react"
+import { Sparkles, Terminal } from "lucide-react"
 import { BackgroundAnimation } from "@/components/sections/background-animation"
+import { motion } from "framer-motion"
 
 export default function AuthLayout({
     children,
@@ -9,29 +12,21 @@ export default function AuthLayout({
     children: React.ReactNode
 }) {
     return (
-        <div className="relative min-h-screen bg-[#060606] text-white selection:bg-primary/30 font-sans antialiased overflow-x-hidden flex flex-col items-center justify-center py-12 px-6">
-            {/* Background Decor */}
+        <div className="relative min-h-screen bg-[#060606] text-white selection:bg-primary/30 font-sans antialiased overflow-hidden flex flex-col items-center justify-center py-4 px-6">
+            {/* Ultra-Premium Background Elements */}
+            <div className="absolute inset-0 grid-pattern opacity-[0.03] pointer-events-none" />
+            <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/10 blur-[150px] rounded-full pointer-events-none -translate-y-1/2" />
+            <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/5 blur-[120px] rounded-full pointer-events-none translate-y-1/2" />
+
             <BackgroundAnimation />
 
-            {/* Branding Header */}
-            <div className="mb-10 flex flex-col items-center gap-4 group">
-                <Link href="/" className="flex items-center gap-4 transition-transform hover:scale-105 active:scale-95">
-                    <div className="bg-primary p-2.5 rounded-2xl shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all group-hover:shadow-[0_0_40px_rgba(37,99,235,0.5)]">
-                        <Sparkles className="w-6 h-6 text-white rotate-12" />
-                    </div>
-                    <span className="text-2xl font-black tracking-tighter text-white">Portfolio Automation Tool</span>
-                </Link>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 group-hover:text-primary transition-colors">
-                    Developer Portfolio Engine
-                </p>
-            </div>
 
-            <main className="w-full max-w-xl relative z-10">
+            <main className="w-full max-w-xl relative z-10 flex flex-col items-center justify-center">
                 {children}
             </main>
-
-            {/* Subtle bottom gradient */}
-            <div className="fixed bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-black/80 to-transparent pointer-events-none -z-10" />
+            <div className="absolute bottom-8 left-8 text-[10px] font-black uppercase tracking-[0.5em] text-white/5 pointer-events-none select-none italic">
+                Secure Terminal Access
+            </div>
         </div>
     )
 }
